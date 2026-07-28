@@ -19,12 +19,17 @@ class NotificationPrefsView(APIView):
         })
     
     def put(self, request):
-        prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
-        prefs.email_enabled = request.data.get('email', prefs.email_enabled)
-        prefs.in_app_enabled = request.data.get('in_app', prefs.in_app_enabled)
-        prefs.websocket_enabled = request.data.get('websocket', prefs.websocket_enabled)
-        prefs.save()
-        return Response({'status': 'updated'})
+        try:
+            prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
+            
+            if 'email_enabled' in request.data:
+                prefs.email_enabled = request.data['email_enabled']
+            if 'in_app_enabled' in request.data:
+                prefs.in_app_enabled = request.data['in_app_enabled']
+            if 'websocket_enabled' in request.data:
+                prefs.websocket_enabled = request.data['websocket_enabled']
+            
+            prefs.save()
 
 class NotificationListView(generics.ListAPIView):
     """GET /api/notifications/ — list current user's notifications"""
