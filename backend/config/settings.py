@@ -270,6 +270,7 @@ MIDDLEWARE = [
     "apps.core.middleware.ratelimit.RateLimitMiddleware",
     "apps.sandbox.middleware.SandboxExecutionLogMiddleware",
     "apps.core.middleware.api_version.APIVersionMiddleware",
+    "apps.webhooks.middleware.WebhookSignatureMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
@@ -863,9 +864,23 @@ NOTIFICATION_CHANNELS = {
     "slack": "apps.notifications.channels.slack_channel.SlackChannel",
 }
 
-# ── Test Environment Settings ──────────────────────────────────────────────
-TESTING = ("test" in sys.argv) or any("pytest" in arg for arg in sys.argv)
-if TESTING:
-    CELERY_TASK_ALWAYS_EAGER = True
-    CELERY_TASK_EAGER_PROPAGATES = True
+# ── Webhook Signature & Replay Protection Settings ───────────────────────
+WEBHOOK_SIGNING_KEYS = [
+    (
+        "default_v1",
+        os.getenv(
+            "WEBHOOK_SIGNING_SECRET",
+            "default-webhook-secret-key-change-in-production",
+        ),
+    ),
+]
+WEBHOOK_TIMESTAMP_WINDOW_SECONDS = int(
+    os.getenv("WEBHOOK_TIMESTAMP_WINDOW_SECONDS", "300")
+)
+WEBHOOK_INCOMING_URL_PREFIXES = [
+    "/api/webhooks/incoming",
+    "/api/webhooks/receiver",
+    "/api/notifications/webhook",
+    "/webhook/",
+]
 

@@ -56,6 +56,7 @@ urlpatterns = [
     # ============================================================
     # WEBHOOKS & UPLOADS
     # ============================================================
+    path("api/webhooks/", include("apps.webhooks.urls")),
     path("api/uploads/", include("apps.uploads.urls")),
     # ── RBAC ───────────────────────────────────────────────────────────────────
     path("api/rbac/", include("apps.rbac.urls")),
@@ -100,23 +101,6 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
-]
-
-urlpatterns = [
-    # ── Django Admin & External Webhooks ──────────────────────────────────────
-    path("admin/", admin.site.urls),
-    path("accounts/", include("allauth.urls")),
-    path("create-checkout-session/", CheckoutSessionView.as_view()),
-    path("webhook/", stripe_webhook),
-    # ── Health Checks ──────────────────────────────────────────────────────────
-    path("health/", include("apps.health.urls")),
-    path("health/legacy/", health_view, name="health"),
-    # ── Version Discovery (root /api/versions/) ─────────────────────────────
-    path("api/versions/", api_versions_view, name="root-api-versions"),
-    # ── Stable Versioned API (/api/v1/) ───────────────────────────────────────
-    path("api/v1/", include(api_v1_patterns)),
-    # ── Unversioned API Fallback (/api/) ───────────────────────────────────────
-    path("api/", include(api_v1_patterns)),
 ]
 
 if settings.DEBUG:
