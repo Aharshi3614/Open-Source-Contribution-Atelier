@@ -6,4 +6,10 @@ class SearchConfig(AppConfig):
     name = "apps.search"
 
     def ready(self):
-        import apps.search.signals
+        try:
+            import apps.search.handlers
+            from apps.events.registry import EventHandlerRegistry
+
+            EventHandlerRegistry.discover_handlers("apps.search.handlers")
+        except ImportError:
+            pass

@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 from django.apps import AppConfig
 
 
@@ -19,6 +22,16 @@ class ProgressConfig(AppConfig):
                     "schedule_type": Schedule.WEEKLY,
                 },
             )
-        except Exception:
+
+            Schedule.objects.get_or_create(
+                name="process-buffered-progress-updates",
+                defaults={
+                    "func": "apps.progress.tasks.process_buffered_progress_updates",
+                    "schedule_type": Schedule.MINUTES,
+                    "minutes": 1,
+                },
+            )
+        except Exception as e:
+            logger.warning("Caught exception: %s", e)
             # Catch database programming/operational errors during migrations or tests
             pass
