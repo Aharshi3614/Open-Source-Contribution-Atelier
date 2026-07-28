@@ -8,6 +8,7 @@ WebSocket consumers.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from typing import Any
 
@@ -46,6 +47,32 @@ class ResilientChannelLayer:
             exc,
         )
 
+    async def _close_primary(self) -> None:
+        """
+        Release the Redis connection pools held by the primary layer.
+
+        Without this the sockets opened by RedisChannelLayer stay allocated for
+        the lifetime of the process after we degrade — the layer is no longer
+        reachable through ``_active``, so nothing else would ever close them.
+        Never raises: pool cleanup must not block the fallback path.
+        """
+        closer = getattr(self._primary, "close_pools", None)
+        if closer is None:
+            logger.debug("Primary channel layer exposes no close_pools(); skipping.")
+            return
+
+        try:
+            result = closer()
+            if inspect.isawaitable(result):
+                await result
+            logger.info("Released Redis connection pools after channel-layer degrade.")
+        except Exception as exc:
+            logger.warning(
+                "Failed to release Redis connection pools after degrade (%s: %s)",
+                type(exc).__name__,
+                exc,
+            )
+
     async def _call(self, operation: str, *args: Any, **kwargs: Any) -> Any:
         method = getattr(self._active, operation)
         try:
@@ -54,6 +81,7 @@ class ResilientChannelLayer:
             if self.degraded:
                 raise
             self._activate_fallback(operation, exc)
+            await self._close_primary()
             fallback_method = getattr(self._fallback, operation)
             return await fallback_method(*args, **kwargs)
 
