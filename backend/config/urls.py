@@ -102,23 +102,6 @@ urlpatterns = [
     ),
 ]
 
-urlpatterns = [
-    # ── Django Admin & External Webhooks ──────────────────────────────────────
-    path("admin/", admin.site.urls),
-    path("accounts/", include("allauth.urls")),
-    path("create-checkout-session/", CheckoutSessionView.as_view()),
-    path("webhook/", stripe_webhook),
-    # ── Health Checks ──────────────────────────────────────────────────────────
-    path("health/", include("apps.health.urls")),
-    path("health/legacy/", health_view, name="health"),
-    # ── Version Discovery (root /api/versions/) ─────────────────────────────
-    path("api/versions/", api_versions_view, name="root-api-versions"),
-    # ── Stable Versioned API (/api/v1/) ───────────────────────────────────────
-    path("api/v1/", include(api_v1_patterns)),
-    # ── Unversioned API Fallback (/api/) ───────────────────────────────────────
-    path("api/", include(api_v1_patterns)),
-]
-
 if settings.DEBUG:
     from apps.feature_flags.debug_view import feature_flags_debug_view
 
