@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Download, Search } from "lucide-react";
 import { ApiEndpointCard } from "../components/docs/ApiEndpointCard";
+import { WebhookInspector } from "../components/docs/WebhookInspector";
 import { SectionCard } from "../components/ui/SectionCard";
 import { API_BASE } from "../lib/api";
 import { useOpenApiSchema } from "../hooks/useOpenApiSchema";
@@ -64,6 +65,9 @@ export function ApiDocsPage() {
           {schema?.info?.version ? ` (v${schema.info.version})` : ""}.
         </p>
       </SectionCard>
+
+      {/* Webhook Event Payload Inspector */}
+      <WebhookInspector />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="relative block max-w-xl flex-1">
