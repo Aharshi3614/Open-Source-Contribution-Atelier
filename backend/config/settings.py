@@ -27,9 +27,11 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 stripe.api_key = STRIPE_SECRET_KEY
 
+
 def load_dotenv(dotenv_path: Path) -> None:
     if not dotenv_path.exists():
         return
+
 
 from dotenv import load_dotenv
 
@@ -383,7 +385,14 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -483,6 +492,7 @@ REST_FRAMEWORK = {
         "auth_otp_verify": os.getenv("RATE_AUTH_OTP_VERIFY", "5/minute"),
         "auth_password_reset": os.getenv("RATE_AUTH_PASSWORD_RESET", "3/hour"),
         "auth_oauth": os.getenv("RATE_AUTH_OAUTH", "20/minute"),
+        "auth_github_callback": "5/minute",
         "auth_magic_link_request": os.getenv(
             "RATE_AUTH_MAGIC_LINK_REQUEST", "3/minute"
         ),
@@ -868,4 +878,3 @@ TESTING = ("test" in sys.argv) or any("pytest" in arg for arg in sys.argv)
 if TESTING:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
-
