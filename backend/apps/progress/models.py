@@ -1,15 +1,14 @@
 from __future__ import annotations
+
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
 from django.conf import settings
-
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
-
 
 from apps.content.models import Exercise, Lesson
 from apps.organizations.models import Organization
@@ -689,3 +688,18 @@ class UserMilestoneCompletion(models.Model):
 
     def __str__(self):
         return f"{self.user.username} completed {self.milestone.name}"
+
+
+class LeaderboardRank(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.DO_NOTHING,
+        primary_key=True,
+    )
+    total_xp = models.IntegerField()
+    rank = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = "progress_leaderboard_mv"
+        ordering = ["rank"]
