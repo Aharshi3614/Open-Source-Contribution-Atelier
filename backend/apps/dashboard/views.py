@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
 from django.db import models
 from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce, TruncDate
@@ -23,6 +22,8 @@ from apps.progress.models import (
     QuizAttempt,
     XPEvent,
 )
+
+User = get_user_model()
 
 
 class LeaderboardPagination(PageNumberPagination):
