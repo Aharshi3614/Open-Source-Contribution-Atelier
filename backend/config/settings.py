@@ -246,8 +246,11 @@ RATE_LIMIT_BACKEND = os.getenv(
 ).lower()
 RATE_LIMIT_REDIS_URL = ENV_REDIS_URL or CHECK_REDIS_URL
 
+PERF_TRACK_SAMPLE_RATE = 0.1  # 10% sampling
+
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    "apps.core.middleware.perf_tracking.PerformanceTrackingMiddleware",
     "apps.core.middleware.request_id.RequestIdMiddleware",
     "config.logging_middleware.RequestResponseLoggingMiddleware",
     "corsheaders.middleware.CorsMiddleware",
