@@ -14,10 +14,10 @@ from apps.billing.webhooks import stripe_webhook
 from apps.dashboard.views import LeaderboardView
 
 from .health_view import health_view
-from .version_view import version_view
+from .version_view import version_view, api_versions_view
 
 urlpatterns = [
-    # ── Admin ──────────────────────────────────────────────────────────────────
+    # ── Django Admin & External Webhooks ──────────────────────────────────────
     path("admin/", admin.site.urls),
     path("api/admin/audit/", include("apps.audit.urls")),
     path("api/audit/", include("apps.audit.urls")),
@@ -26,10 +26,10 @@ urlpatterns = [
 
     # ── Health Checks ──────────────────────────────────────────────────────────
     path("health/", include("apps.health.urls")),
-    # ── Legacy Health (keep for backward compatibility) ──────────────────────
     path("health/legacy/", health_view, name="health"),
-    # ── API Version ────────────────────────────────────────────────────────────
+    # ── Version Discovery (root /api/versions/) ─────────────────────────────
     path("api/version/", version_view, name="version"),
+    path("api/versions/", api_versions_view, name="root-api-versions"),
     # ── Leaderboard ────────────────────────────────────────────────────────────
     path("api/leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     # ── Authentication ─────────────────────────────────────────────────────────
