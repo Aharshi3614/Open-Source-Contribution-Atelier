@@ -82,6 +82,7 @@ const navGroups = [
   {
     title: "Collaboration",
     items: [
+      { to: "/collab-notes", label: "Live Notes", icon: FileText },
       { to: "/community", label: "Community", icon: BriefcaseBusiness },
       { to: "/chat", label: "Chat", icon: MessageSquare },
       { to: "/peer-review", label: "Peer Review", icon: Shield },

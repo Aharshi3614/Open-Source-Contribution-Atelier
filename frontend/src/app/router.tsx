@@ -170,6 +170,12 @@ const CollabSessionPage = lazy(() =>
   })),
 );
 
+const CollabNotesPage = lazy(() =>
+  import("../pages/CollabNotesPage").then((module) => ({
+    default: module.CollabNotesPage,
+  })),
+);
+
 const PrDiffSummarizerPage = lazy(() =>
   import("../pages/PrDiffSummarizerPage").then((module) => ({
     default: module.PrDiffSummarizerPage,
@@ -652,6 +658,24 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <CollabSessionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/collab-notes"
+            element={
+              <ProtectedRoute>
+                <CollabNotesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/collab-notes/:roomId"
+            element={
+              <ProtectedRoute>
+                <CollabNotesPage />
               </ProtectedRoute>
             }
           />
