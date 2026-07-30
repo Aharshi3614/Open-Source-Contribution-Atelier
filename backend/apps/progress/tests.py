@@ -723,3 +723,21 @@ class StreakEngineTests(APITestCase):
         profile = StreakEngine.get_or_create_profile(self.user)
         self.assertEqual(profile.last_activity_date, datetime.date(2026, 7, 11))
 
+from django.db import IntegrityError, transaction
+
+
+class LessonProgressAttemptCountTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="tester", password="pass1234")
+        self.lesson = Lesson.objects.create(title="Test Lesson", slug="test-lesson")
+
+    def test_attempt_count_defaults_to_zero(self):
+        progress = LessonProgress.objects.create(user=self.user, lesson=self.lesson)
+        self.assertEqual(progress.attempt_count, 0)
+
+    def test_attempt_count_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                LessonProgress.objects.create(
+                    user=self.user, lesson=self.lesson, attempt_count=-1
+                )
