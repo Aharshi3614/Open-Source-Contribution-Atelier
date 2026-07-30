@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 # Heartbeat defaults; override in settings for tests or tuning.
 DEFAULT_HEARTBEAT_INTERVAL = 30  # seconds between server pings
 DEFAULT_MAX_MISSED_PONGS = 3  # consecutive unanswered pings before force-close
-WS_CLOSE_HEARTBEAT_TIMEOUT = 4002
+WS_CLOSE_HEARTBEAT_TIMEOUT = 4002  # client stopped answering pings
+WS_CLOSE_HEARTBEAT_ERROR = 4003  # heartbeat itself failed unexpectedly
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -123,10 +124,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         except asyncio.CancelledError:
             raise
         except Exception:
-            # Never let a heartbeat failure take down the consumer.
+            # A heartbeat that dies quietly leaves the socket open with nothing
+            # left to notice it went half-open — the exact leak this loop
+            # exists to prevent. Close it under a distinct code so an internal
+            # failure stays separable from a genuine client timeout.
             logger.exception(
                 "WS heartbeat loop failed: user=%s", getattr(self, "user_id", "?")
             )
+            with contextlib.suppress(Exception):
+                await self.close(code=WS_CLOSE_HEARTBEAT_ERROR)
 
     async def _cancel_heartbeat(self):
         """Cancel and await the heartbeat task so no orphan survives disconnect."""

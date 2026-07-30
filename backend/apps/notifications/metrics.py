@@ -13,11 +13,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+GAUGE_NAME = "notifications_ws_active_connections"
+
 try:
-    from prometheus_client import Gauge
+    from prometheus_client import REGISTRY, Gauge
 
     WS_ACTIVE_CONNECTIONS = Gauge(
-        "notifications_ws_active_connections",
+        GAUGE_NAME,
         "Number of live notification WebSocket connections held by this process",
     )
 except ImportError:
@@ -45,8 +47,10 @@ def ws_active_connections() -> float | None:
     """
     Current gauge value, or ``None`` when prometheus_client is unavailable.
 
-    Used by the leak tests to assert the count returns to baseline.
+    Used by the leak tests to assert the count returns to baseline. Reads
+    through the registry's public sampling API rather than the gauge's private
+    ``_value``, so this keeps working if prometheus_client changes internals.
     """
     if WS_ACTIVE_CONNECTIONS is None:
         return None
-    return WS_ACTIVE_CONNECTIONS._value.get()
+    return REGISTRY.get_sample_value(GAUGE_NAME)
