@@ -225,6 +225,17 @@ class UserProfile(models.Model):
             image_field.save(new_filename, ContentFile(output.read()), save=False)
 
     def save(self, *args, **kwargs):
+        import os
+        import uuid
+
+        if self.avatar and getattr(self.avatar, "_committed", True) is False:
+            ext = os.path.splitext(self.avatar.name)[1]
+            self.avatar.name = f"{uuid.uuid4().hex}{ext}"
+
+        if self.cover_image and getattr(self.cover_image, "_committed", True) is False:
+            ext = os.path.splitext(self.cover_image.name)[1]
+            self.cover_image.name = f"{uuid.uuid4().hex}{ext}"
+
         self._convert_to_webp(self.avatar)
         self._convert_to_webp(self.cover_image)
         super().save(*args, **kwargs)
