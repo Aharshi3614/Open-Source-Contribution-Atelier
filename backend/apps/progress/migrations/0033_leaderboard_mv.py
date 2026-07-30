@@ -3,56 +3,54 @@ from django.conf import settings
 from django.db import migrations, models
 
 
-def create_leaderboard_mv(apps, schema_editor):
-    if schema_editor.connection.vendor != "postgresql":
+def create_leaderboard_view(apps, schema_editor):
+    if schema_editor.connection.vendor == "sqlite":
         schema_editor.execute("""
             CREATE VIEW IF NOT EXISTS progress_leaderboard_mv AS
             SELECT
                 user_id,
-                SUM(xp_delta) as total_xp,
-                0 as rank
+                COALESCE(SUM(xp_delta), 0) as total_xp,
+                ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(xp_delta), 0) DESC) as rank
             FROM progress_xpevent
             GROUP BY user_id;
         """)
-        return
+    else:
+        schema_editor.execute("""
+            CREATE MATERIALIZED VIEW progress_leaderboard_mv AS
+            SELECT
+                user_id,
+                SUM(xp_delta) as total_xp,
+                RANK() OVER (ORDER BY SUM(xp_delta) DESC) as rank
+            FROM progress_xpevent
+            GROUP BY user_id;
 
-    schema_editor.execute("""
-        CREATE MATERIALIZED VIEW IF NOT EXISTS progress_leaderboard_mv AS
-        SELECT
-            user_id,
-            SUM(xp_delta) as total_xp,
-            RANK() OVER (ORDER BY SUM(xp_delta) DESC) as rank
-        FROM progress_xpevent
-        GROUP BY user_id;
+            CREATE UNIQUE INDEX progress_leaderboard_mv_user_id_idx
+            ON progress_leaderboard_mv (user_id);
 
-        CREATE UNIQUE INDEX IF NOT EXISTS progress_leaderboard_mv_user_id_idx
-        ON progress_leaderboard_mv (user_id);
+            CREATE OR REPLACE FUNCTION refresh_leaderboard_trigger_func()
+            RETURNS trigger AS $$
+            BEGIN
+                NOTIFY leaderboard_refresh;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
 
-        CREATE OR REPLACE FUNCTION refresh_leaderboard_trigger_func()
-        RETURNS trigger AS $$
-        BEGIN
-            NOTIFY leaderboard_refresh;
-            RETURN NEW;
-        END;
-        $$ LANGUAGE plpgsql;
-
-        DROP TRIGGER IF EXISTS xp_event_leaderboard_trigger ON progress_xpevent;
-        CREATE TRIGGER xp_event_leaderboard_trigger
-        AFTER INSERT OR UPDATE OR DELETE ON progress_xpevent
-        FOR EACH STATEMENT
-        EXECUTE FUNCTION refresh_leaderboard_trigger_func();
-    """)
+            CREATE TRIGGER xp_event_leaderboard_trigger
+            AFTER INSERT OR UPDATE OR DELETE ON progress_xpevent
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION refresh_leaderboard_trigger_func();
+        """)
 
 
-def reverse_leaderboard_mv(apps, schema_editor):
-    if schema_editor.connection.vendor != "postgresql":
+def drop_leaderboard_view(apps, schema_editor):
+    if schema_editor.connection.vendor == "sqlite":
         schema_editor.execute("DROP VIEW IF EXISTS progress_leaderboard_mv;")
-        return
-    schema_editor.execute("""
-        DROP TRIGGER IF EXISTS xp_event_leaderboard_trigger ON progress_xpevent;
-        DROP FUNCTION IF EXISTS refresh_leaderboard_trigger_func;
-        DROP MATERIALIZED VIEW IF EXISTS progress_leaderboard_mv;
-    """)
+    else:
+        schema_editor.execute("""
+            DROP TRIGGER IF EXISTS xp_event_leaderboard_trigger ON progress_xpevent;
+            DROP FUNCTION IF EXISTS refresh_leaderboard_trigger_func;
+            DROP MATERIALIZED VIEW IF EXISTS progress_leaderboard_mv;
+        """)
 
 
 class Migration(migrations.Migration):
@@ -85,6 +83,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.RunPython(
-            create_leaderboard_mv, reverse_code=reverse_leaderboard_mv
+            create_leaderboard_view,
+            drop_leaderboard_view,
         ),
     ]
