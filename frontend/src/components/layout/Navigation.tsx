@@ -50,6 +50,7 @@ const navGroups = [
     title: "Practice",
     items: [
       { to: "/contributor-sandbox", label: "Playground", icon: TerminalSquare },
+      { to: "/git-rebase-simulator", label: "Git Rebase", icon: GitBranch },
       { to: "/a11y-sandbox", label: "A11y Sandbox", icon: Eye },
       { to: "/pr-diff-summarizer", label: "PR Summarizer", icon: FileDiff },
       { to: "/bounties", label: "Bounties", icon: Target },

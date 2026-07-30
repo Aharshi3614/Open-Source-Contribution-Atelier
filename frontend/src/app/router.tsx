@@ -146,6 +146,12 @@ const GitStashManagerPage = lazy(() =>
   })),
 );
 
+const GitRebaseVisualizerPage = lazy(() =>
+  import("../pages/GitRebaseVisualizerPage").then((module) => ({
+    default: module.GitRebaseVisualizerPage,
+  })),
+);
+
 const MonorepoVisualizerPage = lazy(() =>
   import("../pages/MonorepoVisualizerPage").then((module) => ({
     default: module.MonorepoVisualizerPage,
@@ -604,6 +610,15 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <GitStashManagerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/git-rebase-simulator"
+            element={
+              <ProtectedRoute>
+                <GitRebaseVisualizerPage />
               </ProtectedRoute>
             }
           />
