@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { GitBranch } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import { AuthPageShell } from "../features/auth/AuthPageShell";
 import { fetchApi } from "../lib/api";
 import { useAuth } from "../features/auth/AuthContext";
 import { toast } from "react-hot-toast";
-
-const githubAuthUrl =
-  import.meta.env?.VITE_GITHUB_OAUTH_URL ||
-  `${import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000/api"}/auth/github/`;
+import { DraggableSticker } from "../components/ui/DraggableSticker";
+import { DemoLoginButton } from "../features/auth/DemoLoginButton";
+import { formatGoogleOAuthError } from "../lib/googleOAuth";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -19,6 +18,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   const { login } = useAuth();
 
   // ✅ Check for session expired parameter
@@ -41,12 +41,8 @@ export function LoginPage() {
     }
   }, []);
 
-  const handleGithubSignIn = () => {
-    window.location.href = githubAuthUrl;
-  };
-
   const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
+    onSuccess: async (tokenResponse: any) => {
       try {
         const tokens = await fetchApi("/auth/google/", {
           method: "POST",
@@ -55,13 +51,17 @@ export function LoginPage() {
         });
         login(tokens);
         sessionStorage.setItem("justLoggedIn", "true");
-        window.location.href = "/dashboard";
+        navigate("/dashboard");
       } catch (err: unknown) {
-        setError(getErrorMessage(err, "Google Auth Failed. Check Backend."));
+        const message = formatGoogleOAuthError(err, "backend");
+        setError(message);
+        toast.error(message);
       }
     },
     onError: () => {
-      setError("Google Login Failed / Cancelled.");
+      const message = formatGoogleOAuthError(undefined, "popup");
+      setError(message);
+      toast.error(message);
     },
   });
 
@@ -88,7 +88,7 @@ export function LoginPage() {
       sessionStorage.setItem("justLoggedIn", "true");
       const redirect = sessionStorage.getItem("login_redirect") || "/dashboard";
       sessionStorage.removeItem("login_redirect");
-      window.location.href = redirect;
+      navigate(redirect);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to login"));
       toast.error("Login failed. Please try again.");
@@ -104,6 +104,38 @@ export function LoginPage() {
       subtitle="Sign in to access your dashboard, complete challenges, and track your progress."
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
+        {/* Draggable Stickers scattered in the background */}
+        <div className="hidden lg:block select-none pointer-events-auto">
+          <DraggableSticker
+            initialX={-280}
+            initialY={-80}
+            className="bg-[#FF6B6B] text-white rotate-[-6deg]"
+          >
+            Bug Hunter 🐛
+          </DraggableSticker>
+          <DraggableSticker
+            initialX={-320}
+            initialY={300}
+            className="bg-[#4D96FF] text-white rotate-[8deg]"
+          >
+            git commit -m "success" 🚀
+          </DraggableSticker>
+          <DraggableSticker
+            initialX={-260}
+            initialY={110}
+            className="bg-[#6BCB77] text-black rotate-[4deg]"
+          >
+            100% Merged ✅
+          </DraggableSticker>
+          <DraggableSticker
+            initialX={-300}
+            initialY={480}
+            className="bg-[#FFD93D] text-black rotate-[-10deg]"
+          >
+            Git expert 👑
+          </DraggableSticker>
+        </div>
+
         {error && (
           <div
             role="alert"
@@ -117,7 +149,7 @@ export function LoginPage() {
         <button
           type="button"
           onClick={() => googleLogin()}
-          className="flex items-center justify-center gap-3 w-full px-4 py-3 border-2 border-black rounded-xl font-bold hover:-translate-y-0.5 hover:shadow-card-sm active:translate-y-0 active:shadow-none transition-all text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 bg-white dark:bg-[#12121a] cursor-pointer"
+          className="flex items-center justify-center gap-3 w-full px-4 py-3.5 border-2 border-black rounded-xl font-bold hover:-translate-y-0.5 hover:shadow-card-sm active:translate-y-0 active:shadow-none transition-all text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 bg-white dark:bg-[#12121a] cursor-pointer"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path
@@ -140,23 +172,7 @@ export function LoginPage() {
           Sign in with Google
         </button>
 
-        {/* GitHub Login Button */}
-        <button
-          type="button"
-          onClick={handleGithubSignIn}
-          className="flex items-center justify-center gap-3 w-full px-4 py-3 border-2 border-black bg-slate-900 text-white rounded-xl font-bold hover:-translate-y-0.5 hover:shadow-card-sm active:translate-y-0 active:shadow-none transition-all text-xs uppercase tracking-wider dark:bg-[#C3C0FF] dark:text-black cursor-pointer"
-          aria-label="Sign in with GitHub"
-        >
-          <GitBranch
-            className="transition-transform duration-300 rotate-[-8deg]"
-            size={14}
-            strokeWidth={2.5}
-            aria-hidden="true"
-          />
-          <span>Sign in with GitHub</span>
-        </button>
-
-        <div className="flex items-center gap-3 py-1">
+        <div className="flex items-center gap-[12px] py-2">
           <div className="h-[2px] flex-1 bg-black/10 dark:bg-white/10"></div>
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
             OR
@@ -164,12 +180,12 @@ export function LoginPage() {
           <div className="h-[2px] flex-1 bg-black/10 dark:bg-white/10"></div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="font-black text-slate-500 dark:text-slate-400 ml-1 text-[10px] uppercase tracking-wider">
             Username or Email
           </label>
           <input
-            className="w-full rounded-xl border-2 border-black bg-white dark:bg-[#12121a] px-4 py-2.5 text-slate-900 dark:text-white font-bold outline-none placeholder:text-slate-400 focus:shadow-[2px_2px_0px_0px_#000000] transition-all text-sm"
+            className="w-full rounded-xl border-2 border-black bg-white dark:bg-[#12121a] px-4 py-3 text-slate-900 dark:text-white font-bold outline-none placeholder:text-slate-400 focus:shadow-[2px_2px_0px_0px_#000000] transition-all text-sm"
             placeholder="username or email"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -177,12 +193,12 @@ export function LoginPage() {
           />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="font-black text-slate-500 dark:text-slate-400 ml-1 text-[10px] uppercase tracking-wider">
             Password
           </label>
           <input
-            className="w-full rounded-xl border-2 border-black bg-white dark:bg-[#12121a] px-4 py-2.5 text-slate-900 dark:text-white font-bold outline-none placeholder:text-slate-400 focus:shadow-[2px_2px_0px_0px_#000000] transition-all text-sm"
+            className="w-full rounded-xl border-2 border-black bg-white dark:bg-[#12121a] px-4 py-3 text-slate-900 dark:text-white font-bold outline-none placeholder:text-slate-400 focus:shadow-[2px_2px_0px_0px_#000000] transition-all text-sm"
             type="password"
             placeholder="••••••••"
             value={password}
@@ -191,15 +207,25 @@ export function LoginPage() {
           />
         </div>
 
+        <DemoLoginButton label="🚀 Demo Mode (No Login Required)" />
+
+        <div className="flex items-center gap-[12px] py-2">
+          <div className="h-[2px] flex-1 bg-black/10 dark:bg-white/10"></div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+            OR
+          </span>
+          <div className="h-[2px] flex-1 bg-black/10 dark:bg-white/10"></div>
+        </div>
+
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full rounded-xl border-2 border-black bg-[#C3C0FF] px-4 py-3.5 font-black text-black text-sm shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-xl border-2 border-black bg-[#C3C0FF] px-4 py-4 font-black text-black text-sm shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer uppercase disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? "Logging in..." : "Let Me In!"}
         </button>
 
-        <p className="text-center text-xs font-bold mt-5 text-slate-500 dark:text-slate-400">
+        <p className="text-center text-xs font-bold mt-6 text-slate-500 dark:text-slate-400">
           New here?{" "}
           <a
             href="/signup"

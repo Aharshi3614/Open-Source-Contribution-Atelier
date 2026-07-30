@@ -11,20 +11,29 @@ import {
   TrendingUp,
   Trophy,
   X,
-  Sun,
-  Moon,
   Settings,
   Eye,
   FileText,
+  Target,
+  FileDiff,
+  SearchCode,
+  MessageSquareHeart,
+  GitMerge,
+  FileEdit,
+  Key,
+  ShoppingBag,
+  Cpu,
+  SlidersHorizontal,
+  Activity,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
 import { fetchLessonsApi } from "../../lib/lessons";
 import api from "../../api";
 import LogoutButtonWithConfirm from "./LogoutButtonWithConfirm";
 import { SyncStatusIndicator } from "../ui/SyncStatusIndicator";
 import { NotificationMenu } from "../ui/NotificationMenu";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 const navGroups = [
   {
@@ -33,13 +42,32 @@ const navGroups = [
       { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
       { to: "/learning-path", label: "Lessons", icon: BookOpen },
       { to: "/challenges", label: "Challenges", icon: Trophy },
+      { to: "/admin/content-studio", label: "Content Studio", icon: FileEdit },
     ],
   },
+
   {
     title: "Practice",
     items: [
       { to: "/contributor-sandbox", label: "Playground", icon: TerminalSquare },
       { to: "/a11y-sandbox", label: "A11y Sandbox", icon: Eye },
+      { to: "/pr-diff-summarizer", label: "PR Summarizer", icon: FileDiff },
+      { to: "/bounties", label: "Bounties", icon: Target },
+      {
+        to: "/good-first-issues",
+        label: "Good First Issues",
+        icon: SearchCode,
+      },
+      {
+        to: "/tone-coach",
+        label: "Tone Coach",
+        icon: MessageSquareHeart,
+      },
+      {
+        to: "/conflict-scenario-builder",
+        label: "Conflict Builder",
+        icon: GitMerge,
+      },
     ],
   },
   {
@@ -47,6 +75,7 @@ const navGroups = [
     items: [
       { to: "/portfolio", label: "Portfolio", icon: FileText },
       { to: "/leaderboard", label: "Leaderboard", icon: TrendingUp },
+      { to: "/shop", label: "XP Shop", icon: ShoppingBag },
     ],
   },
   {
@@ -59,12 +88,19 @@ const navGroups = [
   },
   {
     title: "Account",
-    items: [{ to: "/profile", label: "Settings", icon: Settings }],
+    items: [
+      { to: "/profile", label: "Settings", icon: Settings },
+      { to: "/settings/connected-apps", label: "Connected Apps", icon: Shield },
+      { to: "/docs/env-generator", label: ".env Wizard", icon: SlidersHorizontal },
+      { to: "/docs/websocket-simulator", label: "WS Simulator", icon: Activity },
+      { to: "/admin/oauth-clients", label: "OAuth Apps", icon: Key },
+      { to: "/admin/celery", label: "Celery Tasks", icon: Cpu },
+      { to: "/admin/audit", label: "Audit Logs", icon: SlidersHorizontal },
+    ],
   },
 ];
 
 export function Navigation() {
-  const { theme, toggleTheme, setTheme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -195,7 +231,7 @@ export function Navigation() {
           ))}
         </nav>
 
-        <div className="border-t-4 border-black px-4 py-3 text-xs text-muted dark:border-[#2e2924] dark:text-[#c4bbae]">
+        <div className="border-t-4 border-black px-4 py-3 text-xs text-muted dark:border-[#2e2924] dark:text-slate-200">
           <div className="flex items-center gap-2 px-2 py-1.5">
             <Shield size={14} />
             <span>Community Safe Mode</span>
@@ -215,13 +251,16 @@ export function Navigation() {
             <Menu size={22} />
           </button>
           <div className="flex min-w-0 items-center space-x-3 relative grow max-w-md">
-            <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-3 py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-[#c4bbae] dark:focus-within:bg-[#0f0e0c]">
+            <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-3 py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-slate-200 dark:focus-within:bg-[#0f0e0c]">
+              <label htmlFor="nav-search-input" className="sr-only">
+                Search lessons and issues
+              </label>
               <Search size={15} className="shrink-0" />
               <input
+                id="nav-search-input"
                 type="text"
                 placeholder="Search lessons, issues..."
-                aria-label="Search lessons and issues"
-                className="bg-transparent border-none outline-none text-sm w-full text-text placeholder:text-muted/75 dark:text-[#f0ebe2] dark:placeholder:text-[#c4bbae]/75"
+                className="bg-transparent border-none outline-none text-sm w-full text-text placeholder:text-muted/75 dark:text-[#f0ebe2] dark:placeholder:text-slate-300/75"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -312,31 +351,7 @@ export function Navigation() {
               Dashboard
             </Link>
             <SyncStatusIndicator />
-            <button
-              className="rounded-lg bg-surface-low p-2 text-muted hover:text-text border-2 border-black dark:border-[#2e2924] shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 transition-all dark:bg-[#151411] dark:text-[#c4bbae] dark:hover:text-[#f0ebe2] theme-toggle"
-              onClick={toggleTheme}
-              aria-label={
-                theme === "light"
-                  ? "Switch to dark mode"
-                  : "Switch to light mode"
-              }
-            >
-              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
-            </button>
-            <button
-              className={`rounded-lg p-2 border-2 border-black dark:border-[#2e2924] shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 transition-all toggle-contrast ${
-                theme === "high-contrast"
-                  ? "bg-primary text-white"
-                  : "bg-surface-low text-muted hover:text-text dark:bg-[#151411] dark:text-[#c4bbae] dark:hover:text-[#f0ebe2]"
-              }`}
-              onClick={() =>
-                setTheme(theme === "high-contrast" ? "light" : "high-contrast")
-              }
-              aria-label="Toggle High Contrast Mode"
-              title="High Contrast Mode"
-            >
-              <Eye size={16} />
-            </button>
+            <ThemeToggle />
             {user && !user.is_staff && <NotificationMenu />}
             {user ? (
               <div className="flex items-center space-x-2">

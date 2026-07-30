@@ -1,5 +1,6 @@
+from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path, re_path
+from django.urls import include, path
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -8,21 +9,27 @@ from drf_spectacular.views import (
 )
 from graphene_django.views import GraphQLView
 
+from apps.billing.views import CheckoutSessionView
+from apps.billing.webhooks import stripe_webhook
 from apps.dashboard.views import LeaderboardView
 
 from .health_view import health_view
-from .version_view import version_view
+from .version_view import version_view, api_versions_view
 
 urlpatterns = [
-    # ── Admin ──────────────────────────────────────────────────────────────────
+    # ── Django Admin & External Webhooks ──────────────────────────────────────
     path("admin/", admin.site.urls),
-    path("", include("django_prometheus.urls")),
+    path("api/admin/audit/", include("apps.audit.urls")),
+    path("api/audit/", include("apps.audit.urls")),
+    path("api/admin/", include("apps.monitoring.urls")),
+    path("api/monitoring/", include("apps.monitoring.urls")),
+
     # ── Health Checks ──────────────────────────────────────────────────────────
     path("health/", include("apps.health.urls")),
-    # ── Legacy Health (keep for backward compatibility) ──────────────────────
     path("health/legacy/", health_view, name="health"),
-    # ── API Version ────────────────────────────────────────────────────────────
+    # ── Version Discovery (root /api/versions/) ─────────────────────────────
     path("api/version/", version_view, name="version"),
+    path("api/versions/", api_versions_view, name="root-api-versions"),
     # ── Leaderboard ────────────────────────────────────────────────────────────
     path("api/leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     # ── Authentication ─────────────────────────────────────────────────────────
@@ -40,13 +47,15 @@ urlpatterns = [
     # ── Notifications & Real-time ─────────────────────────────────────────────
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/dashboard/", include("apps.dashboard.urls")),
-    path("api/chat/", include("apps.chat.urls")),
-    # ── Search & Collaboration ────────────────────────────────────────────────
+    path("api/predictions/", include("apps.predictions.urls")),
+    path("create-checkout-session/", CheckoutSessionView.as_view()),
+    path("webhook/", stripe_webhook),
     path("api/search/", include("apps.search.urls")),
     path("api/notes/", include("apps.notes.urls")),
     path("api/recommendations/", include("apps.recommendations.urls")),
-    # ── Webhooks & Uploads ─────────────────────────────────────────────────────
-    path("api/webhooks/", include("apps.webhooks.urls")),
+    # ============================================================
+    # WEBHOOKS & UPLOADS
+    # ============================================================
     path("api/uploads/", include("apps.uploads.urls")),
     # ── RBAC ───────────────────────────────────────────────────────────────────
     path("api/rbac/", include("apps.rbac.urls")),
@@ -55,42 +64,48 @@ urlpatterns = [
     path("api/portfolio/", include("apps.portfolio.urls")),
     path("api/organizations/", include("apps.organizations.urls")),
     path("api/accessibility/", include("apps.accessibility.urls")),
+    # ── Issue Reporting ────────────────────────────────────────────────────────
+    path("api/issues/", include("apps.issues.urls")),
+    # ── Project Health & Security ─────────────────────────────────────────────
+    path("api/project-health/", include("apps.project_health.urls")),
+    path("api/security/", include("apps.security.urls")),
+    # ── Plugins ────────────────────────────────────────────────────────────────
+    path("api/plugins/", include("apps.plugins.urls")),
+    # ── Scaffolded Apps ────────────────────────────────────────────────────────
+    path("api/burnout-detection/", include("apps.burnout_detection.urls")),
+    path("api/advanced-search/", include("apps.advanced_search.urls")),
+    path("api/feature-requests/", include("apps.feature_requests.urls")),
+    path("api/issue-categorization/", include("apps.issue_categorization.urls")),
+    path("api/issue-quality-ci/", include("apps.issue_quality_ci.urls")),
+    path("api/issue-routing/", include("apps.issue_routing.urls")),
+    path("api/onboarding/", include("apps.onboarding.urls")),
+    path("api/pr-review-bot/", include("apps.pr_review_bot.urls")),
+    path("api/skills-matching/", include("apps.skills_matching.urls")),
+    path("api/experiments/", include("apps.experiments.urls")),
+    path("api/feed/", include("apps.feed.urls")),
+    path("api/dx-testing/", include("apps.dx_testing.urls")),
+    path("api/issue-quality/", include("apps.issue_quality.urls")),
+    path("api/ml-triage/", include("apps.ml_triage.urls")),
+    # ── AI Tutor ────────────────────────────────────────────────────────────────
+    path("api/ai/tutor/", include("apps.ai_tutor.urls")),
     # ── Events & GraphQL ──────────────────────────────────────────────────────
-    # path("api/events/", include("apps.events.urls")),
     path("api/graphql/", include("apps.graphql_gateway.urls")),
     path("api/graphql/legacy/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
-    # ── API Documentation ──────────────────────────────────────────────────────
+    # ============================================================
+    # API DOCUMENTATION
+    # ============================================================
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
-        "api/docs/",
-        SpectacularSwaggerView.as_view(url_name="schema"),  # Fixed here
+        "docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
-    path(
-        "api/redoc/",
-        SpectacularRedocView.as_view(url_name="schema"),
-        name="redoc-ui",
-    ),
-    # ── GraphQL ────────────────────────────────────────────────────────────────
-    path("api/graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
 ]
-
-# ── Development URLs ──────────────────────────────────────────────────────────
-from django.conf import settings
-from django.conf.urls.static import static
 
 if settings.DEBUG:
     from apps.feature_flags.debug_view import feature_flags_debug_view
 
     urlpatterns += [
-        path("api/organizations/", include("apps.organizations.urls")),
+        path("api/v1/feature-flags/", include("apps.feature_flags.urls")),
         path("api/feature-flags/", include("apps.feature_flags.urls")),
-        path(
-            "debug/feature-flags/", feature_flags_debug_view, name="debug-feature-flags"
-        ),
-        path(
-            "api/feature-flags/debug/",
-            feature_flags_debug_view,
-            name="feature-flags-debug",
-        ),
-    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    ]

@@ -5,6 +5,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+import stripe
 
 # pyrefly: ignore [missing-import]
 from django.core.exceptions import ImproperlyConfigured
@@ -15,32 +16,26 @@ logger = logging.getLogger(__name__)
 
 TESTING = "test" in sys.argv or "pytest" in sys.modules
 
-# Patch Django template context copy for Python 3.14 compatibility
-import copy
-
-from django.template.context import BaseContext
-
-
-def safe_context_copy(self):
-    cls = self.__class__
-    new_context = cls.__new__(cls)
-    for k, v in self.__dict__.items():
-        if k == "dicts":
-            new_context.dicts = self.dicts[:]
-        else:
-            setattr(new_context, k, copy.copy(v))
-    return new_context
-
-
-BaseContext.__copy__ = safe_context_copy
+WS_AUTH_MIGRATION = True
+WS_TOKEN_TIMEOUT = 3600
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+stripe.api_key = STRIPE_SECRET_KEY
+
+
+def load_dotenv(dotenv_path: Path) -> None:
+    if not dotenv_path.exists():
+        return
 
 
 from dotenv import load_dotenv
 
 load_dotenv(BASE_DIR / ".env")
-
 
 SECRET_KEY = os.getenv(
     "SECRET_KEY", "django-insecure-dev-key-not-for-production-use-32bytes!!"
@@ -84,34 +79,29 @@ SECURE_HSTS_PRELOAD = os.getenv(
 ).lower() in {"1", "true", "yes", "on"}
 
 # Restrictive default Content Security Policy.
-# Allow jsDelivr because the API documentation UI loads its assets from there.
-CONTENT_SECURITY_POLICY = os.getenv(
-    "CONTENT_SECURITY_POLICY",
-    (
-        "default-src 'self'; "
-        "base-uri 'self'; "
-        "object-src 'none'; "
-        "frame-ancestors 'none'; "
-        "form-action 'self'; "
-        "script-src 'self' https://cdn.jsdelivr.net; "
-        "style-src 'self' https://cdn.jsdelivr.net; "
-        "img-src 'self' data: blob: http: https: https://cdn.jsdelivr.net; "
-        "font-src 'self' data: https://cdn.jsdelivr.net; "
-        "connect-src 'self'; "
-        "media-src 'self'; "
-        "worker-src 'self'; "
-        "manifest-src 'self'; "
-        "upgrade-insecure-requests"
-    ),
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' https://cdn.jsdelivr.net; "
+    "style-src 'self' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: blob: https://*.amazonaws.com; "
+    "connect-src 'self' wss://localhost:* wss://*.vercel.app; "
+    "font-src 'self' https://cdn.jsdelivr.net; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
 )
 
 TESTING = "test" in sys.argv or "pytest" in sys.modules
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if host.strip()
-]
+_raw_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [host.strip() for host in _raw_hosts if host.strip()]
+
+if not DEBUG and "*" in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.remove("*")
+
+_render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
 
 if not DEBUG and not TESTING and not ALLOWED_HOSTS:
     from django.core.exceptions import ImproperlyConfigured
@@ -120,7 +110,9 @@ if not DEBUG and not TESTING and not ALLOWED_HOSTS:
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
     if origin.strip()
 ]
 
@@ -152,7 +144,7 @@ if DEBUG:
 # CORS_ALLOW_ALL_ORIGINS defaults to False; rely on CORS_ALLOWED_ORIGINS allowlist.
 
 INSTALLED_APPS = [
-    "daphne",
+    # "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -171,11 +163,14 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "allauth",
     "allauth.account",
+    "apps.billing",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.github",
     "apps.accounts",
+    "apps.errors",
     "apps.cache",
     "apps.core",
+    "apps.audit",
     "apps.localization",
     "apps.content",
     "apps.progress",
@@ -183,7 +178,6 @@ INSTALLED_APPS = [
     "apps.accessibility",
     "apps.sandbox",
     "apps.organizations",
-    "apps.billing",
     "apps.webhooks",
     "apps.notes",
     "apps.recommendations",
@@ -196,25 +190,65 @@ INSTALLED_APPS = [
     "apps.feature_flags",
     "apps.issues",
     "apps.gamification",
+    "apps.ai_tutor",
+    "apps.project_health",
     "django_q",
+    "apps.monitoring",
     "waffle",
+    "apps.plugins.apps.PluginsConfig",
+    "apps.oauth",
+    "apps.security",
+    # ── Scaffolded Apps ────────────────────────────────────────────────────────
+    "apps.burnout_detection",
+    "apps.advanced_search",
+    "apps.feature_requests",
+    "apps.issue_categorization",
+    "apps.issue_quality_ci",
+    "apps.issue_routing",
+    "apps.onboarding",
+    "apps.pr_review_bot",
+    "apps.skills_matching",
+    "apps.experiments",
+    "apps.feed",
+    "apps.dx_testing",
+    "apps.issue_quality",
+    "apps.ml_triage",
 ]
-# Redis Cache
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    }
-}
+
+# Cache backends are selected with channel layers below (Redis or LocMem fallback).
 
 # Rate Limit
 DEFAULT_RATE = "100/hour"
+API_RATE_LIMIT_AUTH = int(os.getenv("API_RATE_LIMIT_AUTH", "100"))
+API_RATE_LIMIT_ANON = int(os.getenv("API_RATE_LIMIT_ANON", "20"))
+API_RATE_LIMIT_WINDOW = int(os.getenv("API_RATE_LIMIT_WINDOW", "60"))
+
+# ──────────────────────────────────────────
+# Redis / Channels (graceful fallback when Redis is down)
+# ──────────────────────────────────────────
+from config.channel_layers import build_channel_and_cache_config, is_redis_available
+
+ENV_REDIS_URL = os.getenv("REDIS_URL", "")
+CHECK_REDIS_URL = ENV_REDIS_URL or "redis://127.0.0.1:6379/0"
+
+_channel_cfg = build_channel_and_cache_config()
+REDIS_URL = _channel_cfg.get("REDIS_URL") or CHECK_REDIS_URL
+CHANNEL_LAYERS = _channel_cfg["CHANNEL_LAYERS"]
+CACHES = _channel_cfg["CACHES"]
+CHANNEL_LAYER_BACKEND = _channel_cfg["CHANNEL_LAYER_BACKEND"]
+
+# ── Rate Limit Backend Selection ("redis" | "local") ───────────────────────
+_default_rate_limit_backend = (
+    "redis" if is_redis_available(CHECK_REDIS_URL) and ENV_REDIS_URL else "local"
+)
+RATE_LIMIT_BACKEND = os.getenv(
+    "RATE_LIMIT_BACKEND", _default_rate_limit_backend
+).lower()
+RATE_LIMIT_REDIS_URL = ENV_REDIS_URL or CHECK_REDIS_URL
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    "apps.core.middleware.request_id.RequestIdMiddleware",
     "config.logging_middleware.RequestResponseLoggingMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -226,15 +260,27 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.tenant.TenantContextMiddleware",  # tenant scoping (issue #1940)
+    "apps.audit.middleware.AuditContextMiddleware",
+    "apps.audit.middleware.AuditContextMiddleware",
+    "config.raw_middleware.ReadAfterWriteMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "apps.cache.audit_middleware.AuditLogMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.core.middleware.AdminAuditMiddleware",
     "waffle.middleware.WaffleMiddleware",
-    "apps.cache.middleware.RateLimitMiddleware",
+    "apps.core.middleware.ratelimit.RateLimitMiddleware",
     "apps.sandbox.middleware.SandboxExecutionLogMiddleware",
+    "apps.core.middleware.api_version.APIVersionMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
+
+if TESTING:
+    INSTALLED_APPS.append("nplusone.ext.django")
+    MIDDLEWARE.insert(0, "nplusone.ext.django.NPlusOneMiddleware")
+    NPLUSONE_RAISE = True
+    SILENCED_SYSTEM_CHECKS = ["perf.E001"]
 
 ROOT_URLCONF = "config.urls"
 
@@ -257,33 +303,63 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=int(
-            os.getenv("CONN_MAX_AGE", "0")
-        ),  # PgBouncer uses transaction pooling, so conn_max_age=0
-        conn_health_checks=True,
-    ),
-    "replica": dj_database_url.config(
-        env="REPLICA_DATABASE_URL",
-        default=os.getenv("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=int(os.getenv("CONN_MAX_AGE", "0")),
-        conn_health_checks=True,
-    ),
-}
+if TESTING:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        },
+        "replica": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        },
+    }
+else:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=int(
+                os.getenv("CONN_MAX_AGE", "0")
+            ),  # PgBouncer uses transaction pooling, so conn_max_age=0
+            conn_health_checks=True,
+        ),
+        "replica": dj_database_url.config(
+            env="REPLICA_DATABASE_URL",
+            default=os.getenv("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=int(os.getenv("CONN_MAX_AGE", "0")),
+            conn_health_checks=True,
+        ),
+    }
 
 for db_name, db_config in DATABASES.items():
     if db_config.get("ENGINE") == "django.db.backends.postgresql":
         db_config["ENGINE"] = "django_prometheus.db.backends.postgresql"
         # Disable server-side cursors to avoid issues with PgBouncer transaction pooling
-        db_config.setdefault("OPTIONS", {})["DISABLE_SERVER_SIDE_CURSORS"] = True
-    elif db_config.get("ENGINE") == "django.db.backends.sqlite3":
+        db_config["DISABLE_SERVER_SIDE_CURSORS"] = True
+    elif "sqlite3" in db_config.get("ENGINE", ""):
         db_config["ENGINE"] = "django_prometheus.db.backends.sqlite3"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DATABASE_ROUTERS = ["config.db_router.PrimaryReplicaRouter"]
+
+# ── Read Replica Configuration ─────────────────────────────────────────────
+# Each entry must match a key in DATABASES. Omit or set to [] to disable.
+DATABASE_REPLICAS = [
+    {"NAME": "replica", "WEIGHT": int(os.getenv("REPLICA_WEIGHT", "1"))},
+]
+
+# Seconds after a write before a user's reads are redirected back to replicas.
+READ_AFTER_WRITE_SECONDS = int(os.getenv("READ_AFTER_WRITE_SECONDS", "5"))
+
+# PostgreSQL lock timeout for migrations (in milliseconds)
+DATABASE_LOCK_TIMEOUT = int(os.getenv("DATABASE_LOCK_TIMEOUT", "5000"))
+
+# Replication lag (seconds) above which /health/db/replication-lag returns 503.
+REPLICA_LAG_ALERT_SECONDS = int(os.getenv("REPLICA_LAG_ALERT_SECONDS", "30"))
+
+# Seconds to wait before retrying a dead replica.
+REPLICA_DEAD_TIMEOUT = int(os.getenv("REPLICA_DEAD_TIMEOUT", "60"))
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -294,13 +370,29 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
+
+LANGUAGES = [
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("fr", "French"),
+    ("de", "German"),
+    ("zh-hans", "Simplified Chinese"),
+]
+
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -316,6 +408,12 @@ GITHUB_APP = {
 }
 GITHUB_INSTALLATION_ID = os.getenv("GITHUB_INSTALLATION_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_OAUTH_CLIENT_ID = os.getenv("GITHUB_OAUTH_CLIENT_ID")
+GITHUB_OAUTH_CLIENT_SECRET = os.getenv("GITHUB_OAUTH_CLIENT_SECRET")
+
+# ── AI Tutor ────────────────────────────────────────────────────────────────────
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
 
 # ── Discord Integration ────────────────────────────────────────────────────────
 # Discord webhook URL for achievement announcements
@@ -350,13 +448,31 @@ PASSWORD_RESET_TIMEOUT_MINUTES = int(os.getenv("PASSWORD_RESET_TIMEOUT_MINUTES",
 # How many minutes an OTP verification code remains valid.
 OTP_TIMEOUT_MINUTES = int(os.getenv("OTP_TIMEOUT_MINUTES", "10"))
 
+# ── API Versioning Configuration ──────────────────────────────────────────────
+DEFAULT_API_VERSION = "1.0"
+ALLOWED_API_VERSIONS = ["1.0"]
+DEPRECATED_API_VERSIONS = {}
+API_VERSION_DISCOVERY = {
+    "1.0": {
+        "status": "stable",
+        "changelog_url": "/docs/changelog/v1.0",
+        "sunset": None,
+        "deprecation": None,
+    }
+}
+
 REST_FRAMEWORK = {
     # ── Default Throttle Classes ─────────────────────────────────────────────
     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%SZ",
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
+        "apps.core.throttling.SlidingWindowAnonThrottle",
+        "apps.core.throttling.SlidingWindowUserThrottle",
     ],
+    # ── API Versioning ───────────────────────────────────────────────────────
+    "DEFAULT_VERSIONING_CLASS": "apps.core.versioning.AcceptHeaderOrURLVersioning",
+    "DEFAULT_VERSION": "1.0",
+    "ALLOWED_VERSIONS": ["1.0"],
+    "VERSION_PARAM": "version",
     # ── Throttle Rates ───────────────────────────────────────────────────────
     # Sandbox endpoints
     # Auth endpoints (brute-force + spam protection)
@@ -376,12 +492,15 @@ REST_FRAMEWORK = {
         "auth_otp_verify": os.getenv("RATE_AUTH_OTP_VERIFY", "5/minute"),
         "auth_password_reset": os.getenv("RATE_AUTH_PASSWORD_RESET", "3/hour"),
         "auth_oauth": os.getenv("RATE_AUTH_OAUTH", "20/minute"),
+        "auth_github_callback": "5/minute",
         "auth_magic_link_request": os.getenv(
             "RATE_AUTH_MAGIC_LINK_REQUEST", "3/minute"
         ),
         "auth_magic_link_verify": os.getenv("RATE_AUTH_MAGIC_LINK_VERIFY", "5/minute"),
         # ── Chat ─────────────────────────────────────────────────────────────
         "chat_message": "30/minute",
+        # ── Events ───────────────────────────────────────────────────────────
+        "events_list": os.getenv("RATE_EVENTS_LIST", "60/minute"),
     },
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -396,7 +515,6 @@ REST_FRAMEWORK = {
 # ============================================================
 # ✅ UPDATED: SimpleJWT Configuration with Dynamic Salt
 # ============================================================
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
         minutes=int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", "30"))
@@ -466,7 +584,6 @@ SOCIALACCOUNT_ADAPTER = "apps.accounts.allauth_adapter.CustomSocialAccountAdapte
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 
-
 # ──────────────────────────────────────────
 # Django Channels + Notifications
 # ──────────────────────────────────────────
@@ -474,6 +591,7 @@ INSTALLED_APPS += [
     "channels",
     "apps.notifications.apps.NotificationsConfig",
     "apps.dashboard.apps.DashboardConfig",
+    "apps.predictions.apps.PredictionsConfig",
     "apps.chat.apps.ChatConfig",
     "django.contrib.postgres",
     "apps.search.apps.SearchConfig",
@@ -488,83 +606,25 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
 ]
 
-# Auto-include FRONTEND_URL if set and not already in the list
-if _frontend_url and _frontend_url not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append(_frontend_url)
+CONTENT_SECURITY_POLICY = {
+    "img-src": [
+        "'self'",
+        "blob:",
+        "http://localhost:8000",
+        "https://*.amazonaws.com",
+        "data:",
+    ],
+}
 
-# ──────────────────────────────────────────
-# Redis Availability and Configuration (Dynamic Fallbacks)
-# ──────────────────────────────────────────
-import socket
+CELERY_BEAT_SCHEDULE = {
+    "sync-oss-issues-hourly": {
+        "task": "apps.recommendations.tasks.sync_oss_issues",
+        "schedule": 3600.0,  # Every hour
+    },
+}
 
-
-def is_redis_available(url):
-    try:
-        if not url:
-            return False
-        clean_url = url.replace("rediss://", "").replace("redis://", "")
-        host_port = clean_url.split("/")[0]
-        if "@" in host_port:
-            host_port = host_port.split("@")[1]
-        if ":" in host_port:
-            host, port = host_port.split(":")
-            port = int(port)
-        else:
-            host = host_port
-            port = 6379
-
-        # Test connection with a very short timeout
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.5)
-        s.connect((host, port))
-        s.close()
-        return True
-    except Exception:
-        return False
-
-
-# Candidates check: use REDIS_URL if set, or default to standard local redis host for check
-ENV_REDIS_URL = os.getenv("REDIS_URL", "")
-CHECK_REDIS_URL = ENV_REDIS_URL or "redis://127.0.0.1:6379"
-
-if is_redis_available(CHECK_REDIS_URL):
-    REDIS_URL = CHECK_REDIS_URL
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [REDIS_URL],
-                "capacity": 1500,
-                "expiry": 10,
-            },
-        },
-    }
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": REDIS_URL,
-        },
-        "l1_memory": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "atelier-l1-cache",
-        },
-    }
-else:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        },
-    }
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "atelier-unique-cache",
-        },
-        "l1_memory": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "atelier-l1-cache",
-        },
-    }
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Cache timeout for Search API (in seconds) - Default: 1 hour
 SEARCH_CACHE_TIMEOUT = 60 * 60
@@ -588,69 +648,94 @@ Q_CLUSTER = {
     "bulk": 10,
     **_q_broker,
 }
+# ──────────────────────────────────────────
 # Audit Logging
+# ──────────────────────────────────────────
 AUDIT_LOG_ENABLED = True
 
-# Configure audit logger
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "json": {
-            "format": "%(message)s",
-        },
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "json",
-        },
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": "audit.log",
-            "formatter": "json",
-        },
-    },
-    "loggers": {
-        "audit": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": False,
-        },
-    },
-}
-
 # ──────────────────────────────────────────
-# Logging Configuration
+# Logging Configuration  (single canonical dict)
+# ──────────────────────────────────────────
+# Merges audit/JSON file logging (with request_id correlation) and
+# console logging with sensitive-data masking.  Both sub-systems were
+# previously defined as separate LOGGING dicts; Python's top-down
+# execution meant only the second one ever took effect (issue #2008).
 # ──────────────────────────────────────────
 REQUEST_LOGGING_VERBOSITY = os.getenv("REQUEST_LOGGING_VERBOSITY", "minimal")
 
+# Audit file handler is active unless we are running the test suite,
+# where writing to disk is undesirable and would leave stale files.
+_audit_handlers: list = ["console_audit"] + (["file_audit"] if not TESTING else [])
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    # ── Filters ─────────────────────────────────────────────────────────────
     "filters": {
+        # Injects request_id and user_id into every log record routed
+        # through the audit pipeline so they appear in structured JSON.
+        "request_id": {
+            "()": "apps.core.logging_filters.RequestIdFilter",
+        },
+        # Masks PII (emails, JWT tokens, secrets) from console output.
         "mask_sensitive_data": {
             "()": "config.logging_filters.SensitiveDataFilter",
         },
     },
+    # ── Formatters ──────────────────────────────────────────────────────────
     "formatters": {
+        # Structured JSON formatter used by the audit file handler and the
+        # dedicated audit console handler.  Includes request_id / user_id
+        # fields that are injected by RequestIdFilter.
+        "json_audit": {
+            "format": (
+                '{"time": "%(asctime)s", "level": "%(levelname)s", '
+                '"request_id": "%(request_id)s", "user_id": "%(user_id)s", '
+                '"message": "%(message)s"}'
+            ),
+        },
+        # Human-readable formatter for general console output.
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
             "style": "{",
         },
     },
+    # ── Handlers ─────────────────────────────────────────────────────────────
     "handlers": {
+        # General-purpose console handler: human-readable, PII-masked.
         "console": {
             "class": "logging.StreamHandler",
             "filters": ["mask_sensitive_data"],
             "formatter": "verbose",
         },
+        # Audit console handler: structured JSON with request correlation.
+        # Separate from the general console handler so that audit events
+        # always appear in JSON form regardless of verbosity settings.
+        "console_audit": {
+            "class": "logging.StreamHandler",
+            "filters": ["request_id", "mask_sensitive_data"],
+            "formatter": "json_audit",
+        },
+        # Audit file handler: writes JSON-structured audit events to
+        # audit.log, satisfying the AUDIT_LOG_ENABLED = True requirement.
+        # Disabled automatically in TESTING mode (see _audit_handlers above).
+        "file_audit": {
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "audit.log"),
+            "filters": ["request_id", "mask_sensitive_data"],
+            "formatter": "json_audit",
+        },
     },
+    # ── Loggers ──────────────────────────────────────────────────────────────
     "loggers": {
+        # Dedicated audit logger — writes to both the audit console and
+        # file handlers.  propagate=False prevents double-logging via root.
+        "audit": {
+            "handlers": _audit_handlers,
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Django framework loggers: general console with PII masking.
         "django": {
             "handlers": ["console"],
             "level": "INFO",
@@ -661,20 +746,19 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        # Application loggers: general console with PII masking.
         "apps": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
     },
+    # Root logger catches everything not matched by a named logger above.
     "root": {
         "handlers": ["console"],
         "level": "INFO",
     },
 }
-
-
-GRAPHENE = {"SCHEMA": "config.schema.schema"}
 
 GRAPHENE = {"SCHEMA": "config.schema.schema"}
 
@@ -693,24 +777,104 @@ CURRICULUM_JSON_PATH = os.getenv(
     ),
 )
 
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "memory://")
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_STORE_EAGER_RESULT = True
+CELERY_TASK_EAGER_PROPAGATES = True
 
 # Waffle Feature Flags
 WAFFLE_CREATE_MISSING_FLAGS = True
 WAFFLE_FLAG_DEFAULT = False
 
+# ──────────────────────────────────────────
+# Meilisearch Configurations
+# ──────────────────────────────────────────
+MEILI_URL = os.getenv("MEILI_URL", "http://localhost:7700")
+MEILI_MASTER_KEY = os.getenv("MEILI_MASTER_KEY", "masterKey123")
+MEILI_INDEX_NAME = os.getenv("MEILI_INDEX_NAME", "search_documents")
+
 # Files are assembled outside MEDIA_ROOT and remain inaccessible until clean.
-UPLOAD_QUARANTINE_ROOT = Path(os.getenv("UPLOAD_QUARANTINE_ROOT", BASE_DIR / "quarantine"))
+UPLOAD_QUARANTINE_ROOT = Path(
+    os.getenv("UPLOAD_QUARANTINE_ROOT", BASE_DIR / "quarantine")
+)
 UPLOAD_MAX_SIZES = {
     "avatar": int(os.getenv("UPLOAD_AVATAR_MAX_BYTES", str(5 * 1024 * 1024))),
     "project": int(os.getenv("UPLOAD_PROJECT_MAX_BYTES", str(50 * 1024 * 1024))),
     "lesson": int(os.getenv("UPLOAD_LESSON_MAX_BYTES", str(50 * 1024 * 1024))),
 }
-UPLOAD_ALLOWED_TYPES = ("jpeg", "png", "webp", "gif", "svg", "pdf", "markdown", "text", "zip", "gzip")
+UPLOAD_ALLOWED_TYPES = (
+    "jpeg",
+    "png",
+    "webp",
+    "gif",
+    "svg",
+    "pdf",
+    "markdown",
+    "text",
+    "zip",
+    "gzip",
+)
 UPLOAD_AVATAR_ALLOWED_TYPES = ("jpeg", "png", "webp", "gif", "svg")
 
 CLAMAV_HOST = os.getenv("CLAMAV_HOST", "127.0.0.1")
 CLAMAV_PORT = int(os.getenv("CLAMAV_PORT", "3310"))
 CLAMAV_SOCKET = os.getenv("CLAMAV_SOCKET", "")
 UPLOAD_SCAN_FAIL_CLOSED = os.getenv("UPLOAD_SCAN_FAIL_CLOSED", "true").lower() == "true"
+
+# ──────────────────────────────────────────
+# Database Backup Configuration
+# ──────────────────────────────────────────
+BACKUP_DIR = os.getenv("BACKUP_DIR", str(BASE_DIR / "backups"))
+BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
+
+# ──────────────────────────────────────────
+# Sentry Configuration
+# ──────────────────────────────────────────
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")),
+        send_default_pii=False,
+    )
+
+# ──────────────────────────────────────────
+# Audit Trail Configuration
+# ──────────────────────────────────────────
+AUDIT_RETENTION_DAYS = int(os.getenv("AUDIT_RETENTION_DAYS", "90"))
+AUDIT_ARCHIVE_DIR = os.getenv("AUDIT_ARCHIVE_DIR", str(BASE_DIR / "archives" / "audit"))
+
+# ──────────────────────────────────────────
+# Content Security Policy (CSP)
+# ──────────────────────────────────────────
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: https:; "
+    "font-src 'self' data: https:; "
+    "object-src 'none'; "
+    "frame-ancestors 'none';"
+)
+
+# ──────────────────────────────────────────
+# Multi-Channel Notification Infrastructure
+# ──────────────────────────────────────────
+NOTIFICATION_CHANNELS = {
+    "in_app": "apps.notifications.channels.in_app_channel.InAppChannel",
+    "email": "apps.notifications.channels.email_channel.EmailChannel",
+    "push": "apps.notifications.channels.push_channel.PushChannel",
+    "sms": "apps.notifications.channels.sms_channel.SMSChannel",
+    "webhook": "apps.notifications.channels.webhook_channel.WebhookChannel",
+    "slack": "apps.notifications.channels.slack_channel.SlackChannel",
+}
+
+# ── Test Environment Settings ──────────────────────────────────────────────
+TESTING = ("test" in sys.argv) or any("pytest" in arg for arg in sys.argv)
+if TESTING:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True

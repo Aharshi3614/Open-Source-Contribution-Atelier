@@ -111,20 +111,6 @@ const OrganizationsGrid: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="mt-10 p-5 bg-[#C3C0FF] text-black border-4 border-black rounded-2xl flex items-start gap-3.5 max-w-2xl mx-auto shadow-card-sm">
-        <span className="text-xl">💡</span>
-        <p className="text-sm font-bold leading-relaxed m-0 text-black">
-          Interested in featuring your organization? Contact us at{" "}
-          <a
-            href="mailto:partners@atelier.dev"
-            className="text-black hover:underline transition font-black"
-          >
-            partners@atelier.dev
-          </a>
-        </p>
-      </div>
     </div>
   );
 };

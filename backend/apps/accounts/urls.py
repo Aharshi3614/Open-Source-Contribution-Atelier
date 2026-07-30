@@ -1,11 +1,8 @@
 from django.urls import path
 
 from .views import (
-
-    ChangePasswordView,  # ✅ ADD THIS IMPORT
-
     AvatarUploadView,
-
+    ChangePasswordView,
     ExportDataView,
     GitHubOAuthCallbackView,
     GitHubOAuthStartView,
@@ -20,14 +17,16 @@ from .views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
     PasswordResetValidateTokenView,
+    PublicProfileView,
     RefreshView,
     SecureAccountDeleteView,
+    ShopStreakFreezeView,
     SignupView,
     UserListView,
+    UserSessionDetailView,
+    UserSessionListView,
     UserStatisticsView,
     UserSuggestionsView,
-    PublicProfileView,
-    ShopStreakFreezeView,
 )
 
 urlpatterns = [
@@ -41,13 +40,18 @@ urlpatterns = [
     path("stats/", UserStatisticsView.as_view(), name="user-stats"),
     path("users/", UserListView.as_view(), name="user-list"),
     path("users/suggestions/", UserSuggestionsView.as_view(), name="user-suggestions"),
+    path("sessions/", UserSessionListView.as_view(), name="session-list"),
+    path(
+        "sessions/<uuid:session_id>/",
+        UserSessionDetailView.as_view(),
+        name="session-detail",
+    ),
     path("profile/avatar/", AvatarUploadView.as_view(), name="avatar-upload"),
     path("logout/", LogoutView.as_view(), name="logout"),
     # ── OAuth ──────────────────────────────────────────────────────────────────
     path("google/", GoogleLoginView.as_view(), name="google-login"),
     path("github/", GitHubOAuthStartView.as_view(), name="github-login"),
     path("github/callback/", GitHubOAuthCallbackView.as_view(), name="github-callback"),
-    
     # ── Password Reset ─────────────────────────────────────────────────────────
     path(
         "password-reset/",
@@ -64,7 +68,6 @@ urlpatterns = [
         PasswordResetValidateTokenView.as_view(),
         name="password-reset-validate",
     ),
-    
     # ── Password Change (with JWT Invalidation) ──────────────────────────────
     # ✅ ADD THIS - Change Password Endpoint
     path(
@@ -72,16 +75,16 @@ urlpatterns = [
         ChangePasswordView.as_view(),
         name="change-password",
     ),
-    
     # ── OTP / Email Verification ───────────────────────────────────────────────
     path("otp/request/", OtpRequestView.as_view(), name="otp-request"),
     path("otp/verify/", OtpVerifyView.as_view(), name="otp-verify"),
-    
     # ── Magic Link ─────────────────────────────────────────────────────────────
     path(
         "magic-link/request/", MagicLinkRequestView.as_view(), name="magic-link-request"
     ),
     path("magic-link/verify/", MagicLinkVerifyView.as_view(), name="magic-link-verify"),
     path("profile/<str:username>/", PublicProfileView.as_view(), name="public-profile"),
-    path("shop/streak-freeze/", ShopStreakFreezeView.as_view(), name="shop-streak-freeze"),
+    path(
+        "shop/streak-freeze/", ShopStreakFreezeView.as_view(), name="shop-streak-freeze"
+    ),
 ]

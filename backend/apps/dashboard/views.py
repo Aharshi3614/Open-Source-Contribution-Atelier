@@ -1,12 +1,13 @@
 from datetime import timedelta
 
-from django.contrib.auth.models import User
-from apps.core.cache import multi_level_cache as cache
-from django.db import models, transaction
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+from django.db import models
 from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
-from rest_framework import permissions, serializers, status
+from rest_framework import permissions, serializers
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -14,15 +15,14 @@ from rest_framework.views import APIView
 
 from apps.challenges.models import ChallengeCompletion
 from apps.content.models import Lesson
+from apps.core.cache import multi_level_cache as cache
 from apps.dashboard.models import Issue, PullRequest
 from apps.progress.models import (
     CodeSubmission,
-    ExerciseAttempt,
     LessonProgress,
     QuizAttempt,
     XPEvent,
 )
-from apps.rbac.permissions import HasRole
 
 
 class LeaderboardPagination(PageNumberPagination):
@@ -281,8 +281,8 @@ class ContributorDashboardView(APIView):
             ).count()
 
             lesson_xp = (
-                XPEvent.objects.filter(user=user, source_type="lesson").aggregate(
-                    total=Sum("xp_delta")
+                LessonProgress.objects.filter(user=user, completed=True).aggregate(
+                    total=Sum("score")
                 )["total"]
                 or 0
             )
@@ -306,38 +306,11 @@ class ContributorDashboardView(APIView):
             longest_streak = streak_profile.longest_streak
             # ------------------------------
 
-            # Calculate streak based on unique days of activity (attempts or completed lessons) and active/used freezes
-            activity_days = set()
-            attempts = ExerciseAttempt.objects.filter(user=user).values_list(
-                "created_at", flat=True
-            )
-            for dt in attempts:
-                activity_days.add(timezone.localdate(dt))
-            progress_entries = LessonProgress.objects.filter(user=user).values_list(
-                "updated_at", flat=True
-            )
-            for dt in progress_entries:
-                activity_days.add(timezone.localdate(dt))
-
-            # Apply streak freezes to calculate streak days
-            streak_days = 0
-            current_day = today
-            while True:
-                if current_day < join_date:
-                    break
-                if current_day in activity_days:
-                    streak_days += 1
-                elif current_day == today:
-                    pass
-                else:
-                    break
-                current_day -= timedelta(days=1)
-
             # Determine Rank based on user XP vs others
             lesson_xp_sub = (
-                XPEvent.objects.filter(user=OuterRef("pk"), source_type="lesson")
+                LessonProgress.objects.filter(user=OuterRef("pk"), completed=True)
                 .values("user")
-                .annotate(total=Sum("xp_delta"))
+                .annotate(total=Sum("score"))
                 .values("total")
             )
             issues_xp_sub = (
@@ -391,7 +364,11 @@ class ContributorDashboardView(APIView):
             # StreakFreeze has been migrated to StreakProfile.streak_freezes
             spent_points = 0
             available_points = total_xp - spent_points
-            unused_freezes_count = getattr(user, "streak_profile", None).streak_freezes if hasattr(user, "streak_profile") else 0
+            unused_freezes_count = (
+                getattr(user, "streak_profile", None).streak_freezes
+                if hasattr(user, "streak_profile")
+                else 0
+            )
 
             return {
                 "issues_solved": issues_solved,
@@ -470,6 +447,18 @@ class ContributorDashboardView(APIView):
                 "completion_percentage": completion_percentage,
             }
 
+        elif field == "active_track":
+            from apps.progress.services.milestone_track_service import (
+                MilestoneTrackService,
+            )
+
+            return {
+                "active_track_status": MilestoneTrackService.get_user_active_track_status(
+                    user
+                ),
+                "next_milestone": MilestoneTrackService.get_user_next_milestone(user),
+            }
+
     def get(self, request):
         user = request.user
         fields_param = request.query_params.get("fields")
@@ -481,6 +470,7 @@ class ContributorDashboardView(APIView):
                 "assigned_issues",
                 "recent_prs",
                 "progress_tracker",
+                "active_track",
             ]
 
         data = {}
@@ -490,6 +480,7 @@ class ContributorDashboardView(APIView):
                 "assigned_issues",
                 "recent_prs",
                 "progress_tracker",
+                "active_track",
             ]:
                 continue
 
@@ -501,18 +492,6 @@ class ContributorDashboardView(APIView):
             data[field] = field_data
 
         return Response(data)
-
-
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
-
-
-
-
-
-from django.db import models
-
-from apps.rbac.models import UserRole
 
 
 class ModeratorAnalyticsView(APIView):

@@ -1,12 +1,20 @@
+import logging
+
+logger = logging.getLogger(__name__)
+import base64
+import hashlib
 import os
 import secrets
+import time
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
 import requests as http_requests
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.core.mail import send_mail
 from django.db.models import Sum
 from django.shortcuts import redirect
@@ -32,6 +40,18 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.progress.models import LessonProgress, UserBadge
 from apps.progress.serializers import UserBadgeSerializer
+from schemas.user import (
+    LoginResponseSchema,
+    UserCreateSchema,
+    UserLoginSchema,
+    UserProfileSchema,
+    UserResponseSchema,
+)
+
+
+class LoginResponseSchema(UserResponseSchema):
+    pass
+
 
 from .models import MagicLinkToken, OTPToken, PasswordResetToken
 from .serializers import (
@@ -52,6 +72,7 @@ from .tasks import (
     send_password_reset_email_task,
 )
 from .throttles import (
+    GitHubOAuthCallbackThrottle,
     LoginThrottle,
     MagicLinkRequestThrottle,
     MagicLinkVerifyThrottle,
@@ -166,8 +187,8 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         instance.refresh_from_db()
-        if hasattr(instance, "profile"):
-            instance.profile.refresh_from_db()
+        if hasattr(instance, "user_profile"):
+            instance.user_profile.refresh_from_db()
         response_serializer = UserListSerializer(instance, context={"request": request})
         return Response(response_serializer.data)
 
@@ -319,12 +340,31 @@ class GitHubOAuthStartView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        state = secrets.token_urlsafe(32)
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode("ascii")).digest()
+            )
+            .decode("ascii")
+            .rstrip("=")
+        )
+
+        request.session["github_oauth_state"] = {
+            "value": state,
+            "created_at": time.time(),
+        }
+        request.session["github_oauth_verifier"] = code_verifier
+
         callback_url = request.build_absolute_uri("/api/auth/github/callback/")
         params = urlencode(
             {
                 "client_id": client_id,
                 "redirect_uri": callback_url,
                 "scope": "read:user user:email",
+                "state": state,
+                "code_challenge": code_challenge,
+                "code_challenge_method": "S256",
             }
         )
         return redirect(f"https://github.com/login/oauth/authorize?{params}")
@@ -332,10 +372,12 @@ class GitHubOAuthStartView(APIView):
 
 class GitHubOAuthCallbackView(APIView):
     permission_classes = [permissions.AllowAny]
-    throttle_classes = [OAuthThrottle]
+    throttle_classes = [GitHubOAuthCallbackThrottle]
 
     def get(self, request):
         code = request.query_params.get("code")
+        state = request.query_params.get("state")
+
         if not code:
             return redirect(
                 frontend_url("/", {"auth_error": "GitHub authorization was cancelled."})
@@ -348,59 +390,90 @@ class GitHubOAuthCallbackView(APIView):
                 frontend_url("/", {"auth_error": "GitHub OAuth is not configured."})
             )
 
+        if not state:
+            return Response(
+                {"detail": "Missing state parameter."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        session_state = request.session.pop("github_oauth_state", None)
+        code_verifier = request.session.pop("github_oauth_verifier", None)
+
+        if not session_state or not code_verifier:
+            return Response(
+                {"detail": "OAuth session expired or invalid."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if state != session_state.get("value"):
+            return Response(
+                {"detail": "Invalid OAuth state."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if time.time() - session_state.get("created_at", 0) > 600:
+            return Response(
+                {"detail": "OAuth state expired."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
         callback_url = request.build_absolute_uri("/api/auth/github/callback/")
 
+        from apps.core.resilience import CircuitBreaker, CircuitOpenError
+
+        cb = CircuitBreaker("github_oauth", failure_threshold=5, recovery_timeout=30)
         try:
-            token_response = http_requests.post(
-                "https://github.com/login/oauth/access_token",
-                headers={"Accept": "application/json"},
-                data={
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "code": code,
-                    "redirect_uri": callback_url,
-                },
-                timeout=10,
-            )
-            token_response.raise_for_status()
-            access_token = token_response.json().get(
-                "access_token"
-            ) or token_response.json().get("access")
-            if not access_token:
-                return redirect(
-                    frontend_url(
-                        "/", {"auth_error": "GitHub did not return an access token."}
+            with cb:
+                token_response = http_requests.post(
+                    "https://github.com/login/oauth/access_token",
+                    headers={"Accept": "application/json"},
+                    data={
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "code": code,
+                        "redirect_uri": callback_url,
+                        "code_verifier": code_verifier,
+                    },
+                    timeout=5,
+                )
+                token_response.raise_for_status()
+                access_token = token_response.json().get(
+                    "access_token"
+                ) or token_response.json().get("access")
+                if not access_token:
+                    return redirect(
+                        frontend_url(
+                            "/",
+                            {"auth_error": "GitHub did not return an access token."},
+                        )
                     )
-                )
 
-            github_headers = {
-                "Authorization": f"Bearer {access_token}",
-                "Accept": "application/vnd.github+json",
-            }
-            user_response = http_requests.get(
-                "https://api.github.com/user", headers=github_headers, timeout=10
-            )
-            user_response.raise_for_status()
-            github_user = user_response.json()
+                github_headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                }
+                user_response = http_requests.get(
+                    "https://api.github.com/user", headers=github_headers, timeout=5
+                )
+                user_response.raise_for_status()
+                github_user = user_response.json()
 
-            email = github_user.get("email")
-            if not email:
-                email_response = http_requests.get(
-                    "https://api.github.com/user/emails",
-                    headers=github_headers,
-                    timeout=10,
-                )
-                email_response.raise_for_status()
-                emails = email_response.json()
-                primary_email = next(
-                    (
-                        item
-                        for item in emails
-                        if item.get("primary") and item.get("verified")
-                    ),
-                    None,
-                )
-                email = primary_email.get("email") if primary_email else None
+                email = github_user.get("email")
+                if not email:
+                    email_response = http_requests.get(
+                        "https://api.github.com/user/emails",
+                        headers=github_headers,
+                        timeout=5,
+                    )
+                    email_response.raise_for_status()
+                    emails = email_response.json()
+                    primary_email = next(
+                        (
+                            item
+                            for item in emails
+                            if item.get("primary") and item.get("verified")
+                        ),
+                        None,
+                    )
+                    email = primary_email.get("email") if primary_email else None
 
             if not email:
                 return redirect(
@@ -413,9 +486,7 @@ class GitHubOAuthCallbackView(APIView):
             username_source = github_user.get("login") or email
             github_username = username_from_value(username_source)
 
-            username_conflict = User.objects.filter(
-                username__iexact=github_username
-            )
+            username_conflict = User.objects.filter(username__iexact=github_username)
             if user is not None:
                 username_conflict = username_conflict.exclude(pk=user.pk)
 
@@ -442,18 +513,29 @@ class GitHubOAuthCallbackView(APIView):
                     },
                 )
             )
-        except Exception:
+        except CircuitOpenError:
+            return redirect(
+                frontend_url(
+                    "/",
+                    {
+                        "auth_error": "GitHub authentication service is temporarily unavailable."
+                    },
+                )
+            )
+        except Exception as e:
+            logger.warning("Caught exception: %s", e)
             return redirect(
                 frontend_url("/", {"auth_error": "GitHub authentication failed."})
             )
 
 
+from apps.core.mixins import OrganizationScopedQuerySetMixin
 from .permissions import IsAdminOrModeratorRole
 
 
 @extend_schema(responses=UserListSerializer(many=True))
-class UserListView(generics.ListAPIView):
-    queryset = User.objects.select_related("profile").order_by("id")
+class UserListView(OrganizationScopedQuerySetMixin, generics.ListAPIView):
+    queryset = User.objects.select_related("user_profile").order_by("id")
     permission_classes = [permissions.IsAuthenticated, IsAdminOrModeratorRole]
     serializer_class = UserListSerializer
     pagination_class = LimitOffsetPagination
@@ -572,9 +654,9 @@ class PasswordResetConfirmView(APIView):
 
         user = reset_token.user
         user.set_password(new_password)
-        if hasattr(user, "profile"):
-            user.profile.last_password_change = timezone.now()
-            user.profile.save(update_fields=["last_password_change"])
+        if hasattr(user, "user_profile"):
+            user.user_profile.last_password_change = timezone.now()
+            user.user_profile.save(update_fields=["last_password_change"])
         user.save()
 
         reset_token.is_used = True
@@ -1098,3 +1180,164 @@ class LearningPathView(APIView):
             recommended = max(scored_modules, key=lambda m: m["score"])
 
         return Response({"modules": scored_modules, "next_step": recommended})
+
+
+from .serializers import (
+    AvatarUploadSerializer,
+    ChangePasswordSerializer,
+    PasswordResetValidateTokenSerializer,
+)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=ChangePasswordSerializer,
+        responses={200: OpenApiResponse(description="Password changed successfully.")},
+    )
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(serializer.validated_data["old_password"]):
+            return Response(
+                {"error": "Incorrect old password."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(serializer.validated_data["new_password"])
+        user.save()
+        if hasattr(user, "user_profile"):
+            user.user_profile.increment_jwt_version()
+
+        return Response(
+            {"status": "password changed successfully"}, status=status.HTTP_200_OK
+        )
+
+
+from rest_framework.parsers import MultiPartParser
+
+
+class AvatarUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        request=AvatarUploadSerializer,
+        responses={200: OpenApiResponse(description="Avatar uploaded successfully.")},
+    )
+    def post(self, request):
+        serializer = AvatarUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user_profile = request.user.user_profile
+        user_profile.avatar = serializer.validated_data["avatar"]
+        user_profile.save()
+
+        return Response(
+            {
+                "status": "avatar uploaded successfully",
+                "avatar_url": request.build_absolute_uri(user_profile.avatar.url),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ShopStreakFreezeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={200: OpenApiResponse(description="Streak freeze purchased.")}
+    )
+    def post(self, request):
+        from apps.progress.models import StreakProfile
+
+        streak_profile, _ = StreakProfile.objects.get_or_create(user=request.user)
+        streak_profile.streak_freezes += 1
+        streak_profile.save(update_fields=["streak_freezes"])
+        return Response(
+            {
+                "status": "streak freeze purchased successfully",
+                "streak_freezes": streak_profile.streak_freezes,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetValidateTokenView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        request=PasswordResetValidateTokenSerializer,
+        responses={200: OpenApiResponse(description="Token is valid.")},
+    )
+    def post(self, request):
+        serializer = PasswordResetValidateTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token_value = serializer.validated_data["token"]
+        try:
+            reset_token = PasswordResetToken.objects.get(
+                token=token_value, is_used=False
+            )
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {"error": "invalid_token"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if reset_token.is_expired():
+            return Response(
+                {"error": "expired_token"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {"status": "password reset token is valid"}, status=status.HTTP_200_OK
+        )
+
+
+class UserSuggestionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=UserListSerializer(many=True))
+    def get(self, request):
+        suggestions = User.objects.exclude(id=request.user.id).order_by("-date_joined")[
+            :5
+        ]
+        serializer = UserListSerializer(
+            suggestions, many=True, context={"request": request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PublicProfileView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(responses=UserListSerializer)
+    def get(self, request, username):
+        from django.shortcuts import get_object_or_404
+
+        user = get_object_or_404(User, username=username)
+        serializer = UserListSerializer(user, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+from .models import UserSession
+from .serializers import UserSessionSerializer
+
+
+class UserSessionListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSessionSerializer
+
+    def get_queryset(self):
+        return UserSession.objects.filter(user=self.request.user)
+
+
+class UserSessionDetailView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSessionSerializer
+    lookup_field = "session_id"
+
+    def get_queryset(self):
+        return UserSession.objects.filter(user=self.request.user)

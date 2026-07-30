@@ -2,8 +2,8 @@ import json
 import logging
 import re
 
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -19,15 +19,22 @@ from .throttles import SandboxAnonRateThrottle, SandboxUserRateThrottle
 logger = logging.getLogger(__name__)
 
 
-
 class ChallengeViewSet(viewsets.ModelViewSet):
-    """Existing view — untouched."""
+    """
+    ViewSet for viewing and managing programming challenges.
+
+    Default access is AllowAny for read operations (list, retrieve),
+    while mutation operations (create, update, destroy) require authentication
+    and specific RBAC permissions.
+    """
 
     serializer_class = ChallengeSerializer
+    permission_classes = [AllowAny]
 
     def get_permissions(self):
-        from apps.rbac.permissions import HasPermission
         from rest_framework import permissions
+
+        from apps.rbac.permissions import HasPermission
 
         if self.action in ["create"]:
             return [permissions.IsAuthenticated(), HasPermission("create_content")]
@@ -38,7 +45,17 @@ class ChallengeViewSet(viewsets.ModelViewSet):
         return [permissions.AllowAny()]
 
     def get_queryset(self):
-        return Challenge.objects.filter(organization=self.request.user.organization)
+        user = getattr(self.request, "user", None)
+        if not user or not user.is_authenticated:
+            return Challenge.objects.filter(is_public=True)
+
+        user_org = getattr(user, "organization", None)
+        if user_org:
+            return Challenge.objects.filter(
+                Q(is_public=True) | Q(organization=user_org)
+            )
+
+        return Challenge.objects.filter(is_public=True)
 
 
 class SandboxExecutionView(APIView):
@@ -55,6 +72,7 @@ class SandboxExecutionView(APIView):
 
     # Allow both anonymous and authenticated users
     permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         """
         Expected body: { "code": "...", "language": "python" }
@@ -126,9 +144,7 @@ class SandboxExecutionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        end_event = next(
-            (e for e in events if e.get("action") == "execution_end"), {}
-        )
+        end_event = next((e for e in events if e.get("action") == "execution_end"), {})
 
         return Response(
             {
@@ -150,14 +166,15 @@ class BulkChallengeUploadView(APIView):
     """
 
     def get_permissions(self):
-        from apps.rbac.permissions import HasPermission
         from rest_framework import permissions
+
+        from apps.rbac.permissions import HasPermission
 
         return [permissions.IsAuthenticated(), HasPermission("create_content")]
 
     parser_classes = [MultiPartParser]
 
-def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
@@ -196,7 +213,9 @@ def post(self, request, *args, **kwargs):
             errors = []
 
             if not isinstance(item, dict):
-                row_errors.append({"index": index, "errors": ["Row is not a JSON object."]})
+                row_errors.append(
+                    {"index": index, "errors": ["Row is not a JSON object."]}
+                )
                 continue
 
             title = item.get("title")
@@ -242,15 +261,17 @@ def post(self, request, *args, **kwargs):
 
         try:
             with transaction.atomic():
+                user_org = getattr(request.user, "organization", None)
                 challenges_to_create = [
                     Challenge(
-                        organization=request.user.organization,
+                        organization=user_org,
                         title=item.get("title"),
                         slug=item.get("slug"),
                         summary=item.get("summary", ""),
                         difficulty=item.get("difficulty", "beginner"),
                         points=item.get("points", 50),
                         is_featured=item.get("is_featured", False),
+                        is_public=item.get("is_public", True),
                     )
                     for item in data
                 ]
@@ -271,7 +292,8 @@ def post(self, request, *args, **kwargs):
                 },
                 status=status.HTTP_409_CONFLICT,
             )
-        except Exception:
+        except Exception as e:
+            logger.warning("Caught exception: %s", e)
             logger.exception("Unexpected error during bulk challenge upload")
             return Response(
                 {"error": "An unexpected error occurred while creating challenges."},

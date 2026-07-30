@@ -2,13 +2,16 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    LessonDraftViewSet,
     LessonFeedbackListCreateView,
     LessonFeedbackMetricsView,
     LessonFeedbackRetrieveUpdateDeleteView,
     LessonPDFView,
     LessonViewSet,
+    ModuleDraftViewSet,
     OrganizationListView,
     QuizDetailView,
+    QuizDraftViewSet,
     RoadmapView,
     SearchView,
     SemanticSearchView,
@@ -17,7 +20,10 @@ from .views import (
 
 router = DefaultRouter()
 router.include_format_suffixes = False
-router.register("lessons", LessonViewSet, basename="lesson")
+router.register("modules", ModuleDraftViewSet, basename="module-draft")
+router.register("lessons", LessonDraftViewSet, basename="lesson-draft")
+router.register("quiz-questions", QuizDraftViewSet, basename="quiz-draft")
+router.register("published-lessons", LessonViewSet, basename="lesson")
 
 urlpatterns = router.urls + [
     path("search/", SearchView.as_view(), name="search"),

@@ -1,9 +1,10 @@
-from django.test import RequestFactory, TestCase
-from django.contrib.auth.models import AnonymousUser, User
 import waffle
+from django.contrib.auth.models import AnonymousUser, User
+from django.test import RequestFactory, TestCase
 from waffle.models import Flag, Switch
 
 from .context_processors import feature_flags
+
 
 class FeatureFlagContextProcessorTests(TestCase):
     def test_feature_flags_in_context_with_switches(self):
@@ -22,7 +23,7 @@ class FeatureFlagContextProcessorTests(TestCase):
         user = User.objects.create_user("testuser")
         flag = Flag.objects.create(name="new_ui", everyone=False)
         flag.users.add(user)
-        
+
         request = RequestFactory().get("/")
         request.user = user
         context = feature_flags(request)

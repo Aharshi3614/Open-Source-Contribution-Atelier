@@ -2,11 +2,14 @@
 GitHub profile analyzer for skill detection.
 """
 
-import requests
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
+import requests
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from apps.recommendations.models import UserSkillProfile
 
 logger = logging.getLogger(__name__)

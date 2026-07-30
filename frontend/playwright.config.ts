@@ -22,6 +22,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   /* Reporter: HTML locally, GitHub-friendly list on CI */
+
   reporter: process.env.CI
     ? [
         ["list"],
@@ -86,9 +87,6 @@ export default defineConfig({
     /* ✅ Added: Timeout for accessibility checks */
     timeout: 10000,
   },
-
-  /* ✅ Added: Global setup for accessibility testing */
-  globalSetup: require.resolve("./e2e/global-setup.ts"),
 
   /* ✅ Added: Test directory for accessibility tests */
   testMatch: ["**/*.spec.ts", "**/accessibility/**/*.spec.ts"],

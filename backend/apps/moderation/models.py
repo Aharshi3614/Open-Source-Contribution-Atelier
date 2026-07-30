@@ -1,7 +1,7 @@
-from django.db import models
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
 
 User = get_user_model()
 
@@ -99,8 +99,6 @@ class ModerationAuditEvent(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["created_at"]),
-            models.Index(fields=["status_after"]),
+            models.Index(fields=["created_at"], name="idx_created_at"),
+            models.Index(fields=["status_after"], name="idx_status_after"),
         ]
-
-
