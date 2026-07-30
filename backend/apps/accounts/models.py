@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models, transaction
 
 from apps.content.models import Lesson
+from apps.core.fields import EncryptedCharField
 
 
 class MentorProfile(models.Model):
@@ -178,6 +179,16 @@ class UserProfile(models.Model):
         related_name="users",
     )
 
+    github_access_token = EncryptedCharField(max_length=255, blank=True, default="")
+    github_access_token_hash = models.CharField(
+        max_length=64, blank=True, default="", db_index=True
+    )
+
+    google_oauth_token = EncryptedCharField(max_length=255, blank=True, default="")
+    google_oauth_token_hash = models.CharField(
+        max_length=64, blank=True, default="", db_index=True
+    )
+
     # ============================================================
     # ✅ ADDED: JWT Token Version for Invalidation
     # ============================================================
@@ -191,6 +202,9 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"UserProfile({self.user.username})"
+
+    def __repr__(self):
+        return f"<UserProfile: {self.user.username}>"
 
     def increment_jwt_version(self):
         """
@@ -225,16 +239,21 @@ class UserProfile(models.Model):
             image_field.save(new_filename, ContentFile(output.read()), save=False)
 
     def save(self, *args, **kwargs):
-        import os
-        import uuid
+        import hashlib
 
-        if self.avatar and getattr(self.avatar, "_committed", True) is False:
-            ext = os.path.splitext(self.avatar.name)[1]
-            self.avatar.name = f"{uuid.uuid4().hex}{ext}"
+        if self.github_access_token:
+            self.github_access_token_hash = hashlib.sha256(
+                self.github_access_token.encode("utf-8")
+            ).hexdigest()
+        else:
+            self.github_access_token_hash = ""
 
-        if self.cover_image and getattr(self.cover_image, "_committed", True) is False:
-            ext = os.path.splitext(self.cover_image.name)[1]
-            self.cover_image.name = f"{uuid.uuid4().hex}{ext}"
+        if self.google_oauth_token:
+            self.google_oauth_token_hash = hashlib.sha256(
+                self.google_oauth_token.encode("utf-8")
+            ).hexdigest()
+        else:
+            self.google_oauth_token_hash = ""
 
         self._convert_to_webp(self.avatar)
         self._convert_to_webp(self.cover_image)
@@ -299,3 +318,48 @@ class UserSession(models.Model):
                 UserSession.objects.filter(user=self.user).exclude(
                     pk__in=ids_to_keep
                 ).delete()
+
+
+class GitCredential(models.Model):
+    """
+    Stores encrypted Git credentials.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="git_credentials",
+    )
+    provider = models.CharField(max_length=50, default="github")
+    token = EncryptedCharField(max_length=255, blank=True, default="")
+    token_hash = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    password = EncryptedCharField(max_length=255, blank=True, default="")
+    password_hash = models.CharField(
+        max_length=64, blank=True, default="", db_index=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        import hashlib
+
+        if self.token:
+            self.token_hash = hashlib.sha256(self.token.encode("utf-8")).hexdigest()
+        else:
+            self.token_hash = ""
+
+        if self.password:
+            self.password_hash = hashlib.sha256(
+                self.password.encode("utf-8")
+            ).hexdigest()
+        else:
+            self.password_hash = ""
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"GitCredential({self.user.username}, {self.provider})"
+
+    def __repr__(self):
+        return f"<GitCredential: {self.user.username}, {self.provider}>"

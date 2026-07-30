@@ -21,6 +21,7 @@
     "build-storybook": "storybook build",
     "type-check": "tsc --noEmit",
     "generate:api": "npx openapi-typescript http://127.0.0.1:8000/api/schema/ -o src/types/api.d.ts",
+    "audit": "npm audit --audit-level=high",
     "test:a11y": "playwright test accessibility",
     "test:a11y:ci": "playwright test accessibility --reporter=html,json,junit",
     "test:a11y:report": "node tests/accessibility/generate-report.js",
