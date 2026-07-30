@@ -146,6 +146,12 @@ const GitStashManagerPage = lazy(() =>
   })),
 );
 
+const GitRebaseVisualizerPage = lazy(() =>
+  import("../pages/GitRebaseVisualizerPage").then((module) => ({
+    default: module.GitRebaseVisualizerPage,
+  })),
+);
+
 const MonorepoVisualizerPage = lazy(() =>
   import("../pages/MonorepoVisualizerPage").then((module) => ({
     default: module.MonorepoVisualizerPage,
@@ -167,6 +173,12 @@ const GitBisectGamePage = lazy(() =>
 const CollabSessionPage = lazy(() =>
   import("../pages/CollabSessionPage").then((module) => ({
     default: module.CollabSessionPage,
+  })),
+);
+
+const CollabNotesPage = lazy(() =>
+  import("../pages/CollabNotesPage").then((module) => ({
+    default: module.CollabNotesPage,
   })),
 );
 
@@ -212,6 +224,12 @@ const InvoiceHistoryPage = lazy(() =>
   })),
 );
 
+const WebhookSettingsPage = lazy(() =>
+  import("../pages/WebhookSettingsPage").then((module) => ({
+    default: module.WebhookSettingsPage,
+  })),
+);
+
 const UserProfilePage = lazy(() =>
   import("../pages/UserProfilePage").then((module) => ({
     default: module.UserProfilePage,
@@ -245,6 +263,12 @@ const PeerReviewPage = lazy(() =>
 const PathwayPage = lazy(() =>
   import("../pages/PathwayPage").then((module) => ({
     default: module.PathwayPage,
+  })),
+);
+
+const SkillTreePage = lazy(() =>
+  import("../pages/SkillTreePage").then((module) => ({
+    default: module.SkillTreePage,
   })),
 );
 
@@ -591,10 +615,37 @@ export function AppRouter() {
           />
 
           <Route
+            path="/git-rebase-simulator"
+            element={
+              <ProtectedRoute>
+                <GitRebaseVisualizerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/monorepo-visualizer"
             element={
               <ProtectedRoute>
                 <MonorepoVisualizerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/skill-tree"
+            element={
+              <ProtectedRoute>
+                <SkillTreePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/skills"
+            element={
+              <ProtectedRoute>
+                <SkillTreePage />
               </ProtectedRoute>
             }
           />
@@ -622,6 +673,24 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <CollabSessionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/collab-notes"
+            element={
+              <ProtectedRoute>
+                <CollabNotesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/collab-notes/:roomId"
+            element={
+              <ProtectedRoute>
+                <CollabNotesPage />
               </ProtectedRoute>
             }
           />
@@ -711,6 +780,15 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <TemplateMarketplacePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings/webhooks"
+            element={
+              <ProtectedRoute>
+                <WebhookSettingsPage />
               </ProtectedRoute>
             }
           />
