@@ -22,6 +22,7 @@ import {
   ArrowRight,
   WifiOff,
   HardDrive,
+  Flag,
 } from "lucide-react";
 
 import SkeletonLesson from "../components/ui/skeletons/SkeletonLesson";
@@ -148,6 +149,17 @@ export function LessonPage() {
     }[]
   >([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+  return localStorage.getItem("lesson-sidebar-collapsed") === "true";
+});
+
+useEffect(() => {
+  localStorage.setItem(
+    "lesson-sidebar-collapsed",
+    String(isSidebarCollapsed),
+  );
+}, [isSidebarCollapsed]);
 
   const curriculumLessonRefs = useMemo(
     () =>
@@ -742,6 +754,8 @@ export function LessonPage() {
         <ResponsiveSidebar
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
+          isSidebarCollapsed={isSidebarCollapsed}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
           title={
             <>
               <BookOpen size={18} className="text-primary" />
@@ -750,9 +764,11 @@ export function LessonPage() {
           }
         >
           <div className="space-y-6">
+          {!isSidebarCollapsed && (
             <div className="pt-2">
               <RecentlyViewedLessonsWidget />
             </div>
+          )}
 
             {modules.map((mod, modIdx) => (
               <div key={mod.id} className="space-y-2">
@@ -764,7 +780,9 @@ export function LessonPage() {
                                : "text-muted dark:text-[#c4bbae] border-transparent"
                            }`}
                 >
-                  Module {modIdx + 1}: {mod.title}
+                {isSidebarCollapsed
+                    ? `M${modIdx + 1}`
+                    : `Module {modIdx + 1}: {mod.title}`}
                 </h3>
                 <div className="space-y-1">
                   {mod.lessons.map(
@@ -795,7 +813,10 @@ export function LessonPage() {
                             ) : (
                               <div className="w-3.5 h-3.5 rounded-full border-2 border-black/35 flex-shrink-0" />
                             )}
-                            <span className="truncate">{les.title}</span>
+                            {!isSidebarCollapsed && (
+                              <span className="truncate">{les.title}</span>
+                            )}
+
                           </div>
                           {les.difficulty === "advanced" && (
                             <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0.5 rounded border border-red-700">
@@ -948,17 +969,41 @@ export function LessonPage() {
                       }
                     >
                       <MarkdownRenderer content={markdownContent} />
+                      {lesson?.updatedAt && (
+                        <div className="mt-8 border-t pt-4 text-sm text-muted-foreground">
+                          <strong>Last updated:</strong>{" "}
+                          {new Date(lesson.updatedAt).toLocaleDateString()}
+                       </div>
+                      )}
                     </React.Suspense>
                   </article>
                 </>
               )}
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => alert("Thanks for reporting the typo")}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg font-bold border-2 border-black hover:opacity-90 transition"
-                >
-                  Report Typo 🐛
-                </button>
+              <div className="mt-6 flex justify-end">
+                {(() => {
+                  const currentUrl = window.location.href;
+                  const lessonTitle = lesson?.title || "Lesson";
+                  const issueTitle = encodeURIComponent(`[Lesson Issue]: ${lessonTitle}`);
+                  const issueBody = encodeURIComponent(
+                    `**Lesson Title:** ${lessonTitle}\n` +
+                      `**Lesson URL:** ${currentUrl}\n\n` +
+                      `### What's wrong?\n` +
+                      `Please describe the typo, broken link, or incorrect information in this lesson.`
+                  );
+                  const githubIssueUrl = `https://github.com/Babin123456/Open-Source-Contribution-Atelier/issues/new?title=${issueTitle}&body=${issueBody}&labels=bug,documentation`;
+
+                  return (
+                    <a
+                      href={githubIssueUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 font-bold border-2 border-red-300 rounded-xl hover:bg-red-100 hover:border-red-500 transition-all text-xs shadow-sm dark:bg-red-950/20 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/30"
+                    >
+                      <Flag className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      Report a problem
+                    </a>
+                  );
+                })()}
               </div>
 
               <div className="pt-8 space-y-6">
