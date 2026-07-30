@@ -212,6 +212,12 @@ const InvoiceHistoryPage = lazy(() =>
   })),
 );
 
+const WebhookSettingsPage = lazy(() =>
+  import("../pages/WebhookSettingsPage").then((module) => ({
+    default: module.WebhookSettingsPage,
+  })),
+);
+
 const UserProfilePage = lazy(() =>
   import("../pages/UserProfilePage").then((module) => ({
     default: module.UserProfilePage,
@@ -735,6 +741,15 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <TemplateMarketplacePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings/webhooks"
+            element={
+              <ProtectedRoute>
+                <WebhookSettingsPage />
               </ProtectedRoute>
             }
           />

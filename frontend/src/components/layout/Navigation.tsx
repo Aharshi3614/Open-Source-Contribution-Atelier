@@ -91,6 +91,7 @@ const navGroups = [
     title: "Account",
     items: [
       { to: "/profile", label: "Settings", icon: Settings },
+      { to: "/settings/webhooks", label: "Webhooks", icon: Radio },
       { to: "/settings/connected-apps", label: "Connected Apps", icon: Shield },
       { to: "/docs/env-generator", label: ".env Wizard", icon: SlidersHorizontal },
       { to: "/docs/websocket-simulator", label: "WS Simulator", icon: Activity },
