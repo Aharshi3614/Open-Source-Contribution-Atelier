@@ -30,6 +30,11 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass
 
+        from django.db.models.signals import post_migrate
+
+        post_migrate.connect(self.setup_initial_data, sender=self)
+
+    def setup_initial_data(self, sender, **kwargs):
         try:
             from django_q.models import Schedule
 
@@ -77,6 +82,26 @@ class CoreConfig(AppConfig):
                 defaults={
                     "func": "apps.audit.tasks.archive_audit_events",
                     "schedule_type": Schedule.DAILY,
+                    "repeats": -1,
+                },
+            )
+
+            # Performance sample cleanup
+            Schedule.objects.get_or_create(
+                name="perf-sample-prune-daily",
+                defaults={
+                    "func": "apps.core.tasks.prune_performance_samples",
+                    "schedule_type": Schedule.DAILY,
+                    "repeats": -1,
+                },
+            )
+
+            # Performance sample anonymization
+            Schedule.objects.get_or_create(
+                name="perf-sample-anonymize-hourly",
+                defaults={
+                    "func": "apps.core.tasks.anonymize_performance_samples",
+                    "schedule_type": Schedule.HOURLY,
                     "repeats": -1,
                 },
             )
