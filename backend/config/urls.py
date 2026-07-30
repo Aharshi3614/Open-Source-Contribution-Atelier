@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/audit/", include("apps.audit.urls")),
     path("api/admin/", include("apps.monitoring.urls")),
     path("api/monitoring/", include("apps.monitoring.urls")),
+    path("api/admin/core/", include("apps.core.urls")),
 
     # ── Health Checks ──────────────────────────────────────────────────────────
     path("health/", include("apps.health.urls")),

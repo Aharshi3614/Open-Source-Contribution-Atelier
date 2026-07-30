@@ -111,6 +111,12 @@ const CeleryDashboardPage = lazy(() =>
   })),
 );
 
+const ApiPerformanceDashboardPage = lazy(() =>
+  import("../pages/admin/ApiPerformanceDashboardPage").then((module) => ({
+    default: module.default,
+  })),
+);
+
 const VulnerabilityDashboard = lazy(() =>
   import("../pages/admin/VulnerabilityDashboard").then((module) => ({
     default: module.VulnerabilityDashboard,
@@ -835,10 +841,19 @@ export function AppRouter() {
           />
 
           <Route
-            path="/admin/performance"
+            path="/admin/bundle-performance"
             element={
               <ProtectedRoute>
                 <PerformanceDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/performance"
+            element={
+              <ProtectedRoute>
+                <ApiPerformanceDashboardPage />
               </ProtectedRoute>
             }
           />
