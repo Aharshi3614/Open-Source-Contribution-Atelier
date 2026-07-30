@@ -73,6 +73,7 @@ const navGroups = [
   {
     title: "Progress",
     items: [
+      { to: "/skill-tree", label: "Skill Tree", icon: GitBranch },
       { to: "/portfolio", label: "Portfolio", icon: FileText },
       { to: "/leaderboard", label: "Leaderboard", icon: TrendingUp },
       { to: "/shop", label: "XP Shop", icon: ShoppingBag },

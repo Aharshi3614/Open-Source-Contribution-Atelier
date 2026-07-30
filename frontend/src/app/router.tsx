@@ -248,6 +248,12 @@ const PathwayPage = lazy(() =>
   })),
 );
 
+const SkillTreePage = lazy(() =>
+  import("../pages/SkillTreePage").then((module) => ({
+    default: module.SkillTreePage,
+  })),
+);
+
 const LearningPathPage = lazy(() =>
   import("../pages/LearningPathPage").then((module) => ({
     default: module.LearningPathPage,
@@ -595,6 +601,24 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <MonorepoVisualizerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/skill-tree"
+            element={
+              <ProtectedRoute>
+                <SkillTreePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/skills"
+            element={
+              <ProtectedRoute>
+                <SkillTreePage />
               </ProtectedRoute>
             }
           />
