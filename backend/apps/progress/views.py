@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 from apps.content.models import Lesson
 from apps.content.serializers import LessonSerializer
 from apps.core.throttling import SlidingWindowAnonThrottle, SlidingWindowScopedThrottle
+from apps.deduplication.idempotency import idempotent
 from apps.progress.constants import XP_PER_LEVEL
 from apps.progress.models import XPEvent
 
@@ -254,6 +255,7 @@ class MyProgressView(APIView):
         serializer = LessonProgressSerializer(progress, many=True)
         return Response(serializer.data)
 
+    @idempotent
     def post(self, request):
         from apps.content.models import Lesson
         from apps.progress.services.progress_buffer import ProgressBufferService
@@ -326,6 +328,7 @@ class MyProgressView(APIView):
 class BulkSyncProgressView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @idempotent
     def post(self, request):
         serializer = BulkSyncSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -796,6 +799,7 @@ class QuizNonceView(APIView):
 class QuizAttemptView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @idempotent
     def post(self, request):
         # NEW: Validate the cryptographic nonce
         nonce = request.data.get("nonce")
@@ -1374,24 +1378,26 @@ class HeatmapView(APIView):
                 )
             user = request.user
 
-        start_param = request.query_params.get("start_date")
-        end_param = request.query_params.get("end_date")
+        try:
+            today = user.user_profile.local_today
+        except Exception:
+            today = datetime.date.today()
 
         if start_param:
             try:
                 start_date = datetime.datetime.strptime(start_param, "%Y-%m-%d").date()
             except ValueError:
-                start_date = datetime.date.today() - datetime.timedelta(days=365)
+                start_date = today - datetime.timedelta(days=365)
         else:
-            start_date = datetime.date.today() - datetime.timedelta(days=365)
+            start_date = today - datetime.timedelta(days=365)
 
         if end_param:
             try:
                 end_date = datetime.datetime.strptime(end_param, "%Y-%m-%d").date()
             except ValueError:
-                end_date = datetime.date.today()
+                end_date = today
         else:
-            end_date = datetime.date.today()
+            end_date = today
 
         activity_type_filter = request.query_params.get("activity_type")
 
@@ -1544,21 +1550,26 @@ class HeatmapCSVExportView(APIView):
         end_param = request.query_params.get("end_date")
         activity_type_filter = request.query_params.get("activity_type")
 
+        try:
+            today = user.user_profile.local_today
+        except Exception:
+            today = datetime.date.today()
+
         if start_param:
             try:
                 start_date = datetime.datetime.strptime(start_param, "%Y-%m-%d").date()
             except ValueError:
-                start_date = datetime.date.today() - datetime.timedelta(days=365)
+                start_date = today - datetime.timedelta(days=365)
         else:
-            start_date = datetime.date.today() - datetime.timedelta(days=365)
+            start_date = today - datetime.timedelta(days=365)
 
         if end_param:
             try:
                 end_date = datetime.datetime.strptime(end_param, "%Y-%m-%d").date()
             except ValueError:
-                end_date = datetime.date.today()
+                end_date = today
         else:
-            end_date = datetime.date.today()
+            end_date = today
 
         activity_breakdown = defaultdict(
             lambda: {"reading": 0, "quizzes": 0, "code_submissions": 0}
