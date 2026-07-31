@@ -12,7 +12,7 @@ import {
   Layers,
   SlidersHorizontal,
 } from "lucide-react";
-import { fetchApi } from "../../lib/api";
+import { API_BASE, fetchApi } from "../../lib/api";
 import { useAuth } from "../../features/auth/AuthContext";
 import { AuditLogTable } from "../../components/admin/AuditLogTable";
 import { AuditEventDiff, AuditEventData } from "../../components/admin/AuditEventDiff";
@@ -52,7 +52,7 @@ export function AuditLogViewerPage() {
       if (startDate) params.set("start_date", startDate);
       if (endDate) params.set("end_date", endDate);
 
-      const data = await fetchApi(`/api/admin/audit/?${params.toString()}`);
+      const data = await fetchApi(`/admin/audit/?${params.toString()}`);
       if (data && Array.isArray(data.results)) {
         setLogs(data.results);
         setTotalCount(data.count || data.results.length);
@@ -96,7 +96,7 @@ export function AuditLogViewerPage() {
     if (startDate) params.set("start_date", startDate);
     if (endDate) params.set("end_date", endDate);
 
-    const exportUrl = `/api/admin/audit/?${params.toString()}`;
+    const exportUrl = `${API_BASE}/admin/audit/?${params.toString()}`;
     
     // Trigger file download
     const token = localStorage.getItem("token") || sessionStorage.getItem("token");
