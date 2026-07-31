@@ -25,6 +25,8 @@ import {
   Cpu,
   SlidersHorizontal,
   Activity,
+  GitBranch,
+  Radio,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/AuthContext";
