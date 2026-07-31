@@ -236,7 +236,7 @@ export function Navigation() {
                       }
                     >
                       <Icon size={14} />
-                      <span>{item.label === 'Dashboard' ? t('nav.dashboard', {defaultValue: 'Dashboard'}) : item.label === 'Lessons' ? t('nav.lessons', {defaultValue: 'Lessons'}) : item.label === 'Leaderboard' ? t('nav.leaderboard', {defaultValue: 'Leaderboard'}) : item.label === 'Playground' ? t('nav.sandbox', {defaultValue: 'Playground'}) : item.label}</span>
+                      <span>{item.label}</span>
                     </NavLink>
                   );
                 })}
