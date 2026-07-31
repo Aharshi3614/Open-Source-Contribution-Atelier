@@ -146,15 +146,16 @@ export function GitRebaseVisualizerPage() {
 
   return (
     <main id="main-content" className="w-full max-w-[1600px] mx-auto space-y-6 text-text dark:text-[#f0ebe2] px-2 sm:px-4 lg:px-6">
-      {/* Header Banner Deck - Neo-Brutalist Theme */}
-      <div className="w-full bg-white dark:bg-[#151411] border-4 border-black dark:border-[#2e2924] rounded-3xl p-6 shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      {/* Header Banner Deck - Clean 2-Row Neo-Brutalist Layout */}
+      <div className="w-full bg-white dark:bg-[#151411] border-4 border-black dark:border-[#2e2924] rounded-3xl p-6 shadow-card space-y-5">
+        {/* Row 1: Icon, Title & Subtitle */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#C3C0FF] border-2 border-black flex items-center justify-center shrink-0 text-black shadow-card-sm">
-            <GitBranch className="w-7 h-7" />
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#C3C0FF] border-2 border-black flex items-center justify-center shrink-0 text-black shadow-card-sm">
+            <GitBranch className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-display font-black uppercase tracking-tight text-black dark:text-white">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-3xl font-display font-black uppercase tracking-tight text-black dark:text-white">
                 Git Interactive Rebase Studio
               </h1>
               <span className="text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded-md bg-[#C3C0FF] text-black border-2 border-black">
@@ -167,16 +168,16 @@ export function GitRebaseVisualizerPage() {
           </div>
         </div>
 
-        {/* Scenario Selection Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 shrink-0">
+        {/* Row 2: Scenario Selection Deck (Fits 100% inside card bounds) */}
+        <div className="w-full bg-surface-low dark:bg-[#0a0a0f] p-2 rounded-2xl border-2 border-black dark:border-[#2e2924] flex flex-wrap items-center gap-2 overflow-hidden">
           {scenarios.map((sc) => (
             <button
               key={sc.id}
               onClick={() => handleSelectScenario(sc)}
-              className={`px-4 py-2.5 text-xs font-black rounded-xl whitespace-nowrap transition-all border-2 border-black ${
+              className={`px-3.5 py-2 text-xs font-black rounded-xl transition-all border-2 border-black ${
                 activeScenario.id === sc.id
-                  ? "bg-[#C3C0FF] text-black shadow-card"
-                  : "bg-white dark:bg-[#151411] text-text dark:text-white hover:bg-gray-100 dark:hover:bg-[#1f1c18] shadow-card-sm"
+                  ? "bg-[#C3C0FF] text-black shadow-card-sm"
+                  : "bg-white dark:bg-[#151411] text-text dark:text-white hover:bg-gray-100 dark:hover:bg-[#1f1c18]"
               }`}
             >
               {sc.title}
