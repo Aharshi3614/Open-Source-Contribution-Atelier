@@ -168,6 +168,7 @@ export function Navigation() {
     { slug: string; title: string; description: string }[]
   >([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     fetchLessonsApi().then((data) => setLessonsCatalog(data));
@@ -299,11 +300,11 @@ export function Navigation() {
       </aside>
 
       <header className="fixed inset-x-0 top-0 z-30 h-[72px] border-b-4 border-black bg-white lg:left-[240px] dark:border-[#2e2924] dark:bg-[#0f0e0c]">
-        <div className="flex h-full items-center justify-between gap-1.5 sm:gap-4 px-2 sm:px-6 lg:px-8 max-w-full overflow-hidden">
-          <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex h-full items-center justify-between gap-2 px-3 sm:px-6 lg:px-8 max-w-full overflow-hidden">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden rounded-lg border-2 border-black p-1.5 sm:p-2 menu-btn bg-white dark:bg-[#151411] dark:border-[#2e2924]"
+              className="lg:hidden rounded-lg border-2 border-black p-2 menu-btn bg-white dark:bg-[#151411] dark:border-[#2e2924]"
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? "Close mobile menu" : "Open mobile menu"}
               aria-controls="mobile-menu"
@@ -312,24 +313,24 @@ export function Navigation() {
             </button>
             <Link
               to="/"
-              className="hidden min-[380px]:inline-block lg:hidden font-display text-base font-black tracking-tight text-black dark:text-white uppercase shrink-0"
+              className="lg:hidden font-display text-base sm:text-lg font-black tracking-tight text-black dark:text-white uppercase shrink-0"
             >
               Atelier
             </Link>
           </div>
 
-          {/* Search bar input container - responsive width */}
-          <div className="flex min-w-0 items-center space-x-1 sm:space-x-2 relative grow max-w-[120px] min-[380px]:max-w-[170px] sm:max-w-md">
-            <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-2.5 py-1.5 sm:px-3 sm:py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-slate-200 dark:focus-within:bg-[#0f0e0c]">
+          {/* Desktop Search bar input container */}
+          <div className="hidden lg:flex min-w-0 items-center space-x-2 relative grow max-w-md">
+            <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-3 py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-slate-200 dark:focus-within:bg-[#0f0e0c]">
               <label htmlFor="nav-search-input" className="sr-only">
                 Search features, tools, lessons, pages
               </label>
-              <Search size={14} className="shrink-0 text-slate-400" />
+              <Search size={15} className="shrink-0 text-slate-400" />
               <input
                 id="nav-search-input"
                 type="text"
-                placeholder="Search..."
-                className="bg-transparent border-none outline-none text-xs sm:text-sm w-full text-text placeholder:text-muted/75 dark:text-[#f0ebe2] dark:placeholder:text-slate-400"
+                placeholder="Search features, tools, lessons, pages..."
+                className="bg-transparent border-none outline-none text-sm w-full text-text placeholder:text-muted/75 dark:text-[#f0ebe2] dark:placeholder:text-slate-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -344,7 +345,7 @@ export function Navigation() {
               )}
             </div>
 
-            {/* Search Results Dropdown */}
+            {/* Desktop Search Results Dropdown */}
             {searchResults && searchQuery.length > 1 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white border-4 border-black rounded-2xl shadow-card p-4 z-50 max-h-[70vh] overflow-y-auto dark:bg-[#151411] dark:border-[#2e2924]">
                 {isSearching ? (
@@ -448,6 +449,15 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+            {/* Mobile Search Toggle Button */}
+            <button
+              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+              className="lg:hidden p-2 rounded-lg border-2 border-black bg-white dark:bg-[#151411] dark:border-[#2e2924] text-text dark:text-[#f0ebe2]"
+              aria-label="Toggle mobile search"
+            >
+              <Search size={18} />
+            </button>
+
             <Link
               to="/docs/fullstack"
               className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
@@ -492,6 +502,30 @@ export function Navigation() {
             )}
           </div>
         </div>
+
+        {/* Mobile Search Overlay Bar */}
+        {mobileSearchOpen && (
+          <div className="lg:hidden border-t-2 border-black dark:border-[#2e2924] bg-white dark:bg-[#151411] p-3 shadow-lg flex items-center gap-2">
+            <Search size={16} className="text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search features, tools, lessons..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-none outline-none text-xs w-full text-text dark:text-[#f0ebe2]"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setMobileSearchOpen(false);
+              }}
+              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[#2e2924]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Mobile Navigation Drawer */}
