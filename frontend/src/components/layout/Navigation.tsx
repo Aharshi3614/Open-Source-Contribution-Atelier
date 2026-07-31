@@ -25,6 +25,8 @@ import {
   Cpu,
   SlidersHorizontal,
   Activity,
+  GitBranch,
+  Radio,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/AuthContext";
@@ -50,6 +52,7 @@ const navGroups = [
     title: "Practice",
     items: [
       { to: "/contributor-sandbox", label: "Playground", icon: TerminalSquare },
+      { to: "/git-rebase-simulator", label: "Git Rebase", icon: GitBranch },
       { to: "/a11y-sandbox", label: "A11y Sandbox", icon: Eye },
       { to: "/pr-diff-summarizer", label: "PR Summarizer", icon: FileDiff },
       { to: "/bounties", label: "Bounties", icon: Target },
@@ -73,6 +76,7 @@ const navGroups = [
   {
     title: "Progress",
     items: [
+      { to: "/skill-tree", label: "Skill Tree", icon: GitBranch },
       { to: "/portfolio", label: "Portfolio", icon: FileText },
       { to: "/leaderboard", label: "Leaderboard", icon: TrendingUp },
       { to: "/shop", label: "XP Shop", icon: ShoppingBag },
@@ -81,6 +85,7 @@ const navGroups = [
   {
     title: "Collaboration",
     items: [
+      { to: "/collab-notes", label: "Live Notes", icon: FileText },
       { to: "/community", label: "Community", icon: BriefcaseBusiness },
       { to: "/chat", label: "Chat", icon: MessageSquare },
       { to: "/peer-review", label: "Peer Review", icon: Shield },
@@ -90,6 +95,7 @@ const navGroups = [
     title: "Account",
     items: [
       { to: "/profile", label: "Settings", icon: Settings },
+      { to: "/settings/webhooks", label: "Webhooks", icon: Radio },
       { to: "/settings/connected-apps", label: "Connected Apps", icon: Shield },
       { to: "/docs/env-generator", label: ".env Wizard", icon: SlidersHorizontal },
       { to: "/docs/websocket-simulator", label: "WS Simulator", icon: Activity },
