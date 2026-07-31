@@ -75,6 +75,12 @@ const LessonPage = lazy(() =>
   })),
 );
 
+const LessonCollaboratePage = lazy(() =>
+  import("../pages/LessonCollaboratePage").then((module) => ({
+    default: module.LessonCollaboratePage,
+  })),
+);
+
 const NotFoundPage = lazy(() =>
   import("../pages/NotFoundPage").then((module) => ({
     default: module.NotFoundPage,
@@ -504,6 +510,15 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <LessonPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/lessons/:slug/collaborate"
+            element={
+              <ProtectedRoute>
+                <LessonCollaboratePage />
               </ProtectedRoute>
             }
           />
