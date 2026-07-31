@@ -455,32 +455,46 @@ export function ContentStudioPage() {
         <div className="lg:col-span-7 space-y-4 w-full min-w-0 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-3xl p-5 sm:p-6 shadow-card-sm">
           {activeNote ? (
             <>
-              {/* Studio Workspace Header Bar */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b-2 border-black/10 dark:border-[#2e2924]">
-                <div className="space-y-1 w-full sm:w-auto min-w-0">
+              {/* Studio Workspace Header Bar - Clean 2-Row Layout */}
+              <div className="space-y-4 pb-4 border-b-2 border-black/10 dark:border-[#2e2924]">
+                {/* Row 1: Note Title & Metadata */}
+                <div className="space-y-1.5 w-full min-w-0">
                   <input
                     type="text"
                     value={activeNote.title}
                     onChange={(e) => updateActiveNote({ title: e.target.value })}
-                    className="font-black text-xl sm:text-2xl bg-transparent text-text dark:text-[#f0ebe2] border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none transition-colors w-full"
+                    className="font-black text-xl sm:text-2xl bg-transparent text-text dark:text-[#f0ebe2] border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none transition-colors w-full tracking-tight"
+                    placeholder="Note Title..."
                   />
-                  <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-400 font-mono">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-indigo-400" /> {new Date(activeNote.updatedAt).toLocaleTimeString()}
                     </span>
                     <span>•</span>
                     <span>{activeNote.content.length} characters</span>
+                    {activeNote.tags.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                          {activeNote.tags.map((tag) => (
+                            <span key={tag} className="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md font-bold">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Symmetrical View Mode Segment Pills */}
-                <div className="flex items-center gap-1 bg-surface-low dark:bg-[#0a0a0f] p-1.5 rounded-2xl border-2 border-black/10 dark:border-[#2e2924] shrink-0 w-full sm:w-auto justify-around">
+                {/* Row 2: Symmetrical View Mode Segment Pills */}
+                <div className="w-full bg-surface-low dark:bg-[#0a0a0f] p-1.5 rounded-2xl border-2 border-black/10 dark:border-[#2e2924] flex flex-wrap sm:flex-nowrap items-center justify-start sm:justify-center gap-1.5 overflow-x-auto">
                   <button
                     onClick={() => setViewMode("split")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl transition-all shrink-0 ${
                       viewMode === "split"
                         ? "bg-indigo-600 text-white shadow-card-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     <Columns className="w-3.5 h-3.5" /> Split
@@ -488,10 +502,10 @@ export function ContentStudioPage() {
 
                   <button
                     onClick={() => setViewMode("editor")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl transition-all shrink-0 ${
                       viewMode === "editor"
                         ? "bg-indigo-600 text-white shadow-card-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     <Edit3 className="w-3.5 h-3.5" /> Code Editor
@@ -499,10 +513,10 @@ export function ContentStudioPage() {
 
                   <button
                     onClick={() => setViewMode("preview")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl transition-all shrink-0 ${
                       viewMode === "preview"
                         ? "bg-indigo-600 text-white shadow-card-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     <Eye className="w-3.5 h-3.5" /> Preview
@@ -510,10 +524,10 @@ export function ContentStudioPage() {
 
                   <button
                     onClick={() => setViewMode("meta")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl transition-all shrink-0 ${
                       viewMode === "meta"
                         ? "bg-indigo-600 text-white shadow-card-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     <Tag className="w-3.5 h-3.5" /> Meta
@@ -521,10 +535,10 @@ export function ContentStudioPage() {
 
                   <button
                     onClick={() => setViewMode("quizzes")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl transition-all shrink-0 ${
                       viewMode === "quizzes"
                         ? "bg-indigo-600 text-white shadow-card-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     <HelpCircle className="w-3.5 h-3.5" /> Quiz ({activeNote.quizzes.length})
