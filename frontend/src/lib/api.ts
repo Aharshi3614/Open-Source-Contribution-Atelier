@@ -1,8 +1,10 @@
 /// <reference types="vite/client" />
 import { enqueueOfflineAction } from "./offlineQueue";
-import { clearAccessToken, getAccessToken } from "./authToken";
+import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
 import { broadcastAuthEvent } from "./authSync";
 import toast from "react-hot-toast";
+
+let refreshPromise: Promise<string | null> | null = null;
 
 const getSafeEnvVar = (key: string): string => {
   if (typeof process !== "undefined" && process.env && process.env[key]) {
@@ -31,6 +33,7 @@ type RequestOptions = RequestInit & {
   timeoutMs?: number;
   /** Max retries on network/5xx errors. Default: 1 */
   maxRetries?: number;
+  _isRetry?: boolean;
 };
 
 /**
@@ -105,6 +108,44 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
       }
 
       if (!response.ok) {
+        if (response.status === 401 && !options._isRetry) {
+          try {
+            const refreshToken = localStorage.getItem("refreshToken");
+            if (refreshToken) {
+              if (!refreshPromise) {
+                refreshPromise = fetch(`${API_BASE}/auth/refresh/`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ refresh: refreshToken }),
+                }).then(async (res) => {
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data.access) {
+                      setAccessToken(data.access);
+                      if (data.refresh) {
+                        localStorage.setItem("refreshToken", data.refresh);
+                      }
+                      return data.access;
+                    }
+                  }
+                  throw new Error("Refresh failed");
+                }).finally(() => {
+                  refreshPromise = null;
+                });
+              }
+              const newAccessToken = await refreshPromise;
+              if (newAccessToken) {
+                return await fetchApi(endpoint, {
+                  ...options,
+                  _isRetry: true,
+                });
+              }
+            }
+          } catch (e) {
+            console.error("[fetchApi] Token refresh failed", e);
+          }
+        }
+
         const errorBody = await response.json().catch(() => ({}));
         let errorMessage =
           errorBody.error ||
