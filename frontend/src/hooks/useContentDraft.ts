@@ -64,7 +64,7 @@ export function useContentDraft(initialLessonId?: number) {
           setActiveLesson(res.data[0].lessons[0]);
         }
       } else {
-        // Fallback to static curriculum.json or sample modules
+        const savedNotesMap = JSON.parse(localStorage.getItem("atelier_saved_notes_map") || "{}");
         const currRes = await fetch("/content/curriculum.json").catch(() => null);
         if (currRes && currRes.ok) {
           const currData = await currRes.json();
@@ -74,20 +74,24 @@ export function useContentDraft(initialLessonId?: number) {
             slug: m.id || `module-${idx + 1}`,
             description: m.description || "",
             order: idx + 1,
-            lessons: (m.lessons || []).map((l: any, lIdx: number) => ({
-              id: (idx + 1) * 100 + lIdx + 1,
-              module: idx + 1,
-              title: l.title,
-              slug: l.slug,
-              description: l.description || "",
-              content: `# ${l.title}\n\n${l.description || "Welcome to this lesson."}\n\n\`\`\`typescript\nfunction startLesson() {\n  console.log("Interactive curriculum ready!");\n}\n\`\`\`\n`,
-              difficulty: l.difficulty || "beginner",
-              tags: ["git", "open-source"],
-              estimatedMinutes: l.estimatedMinutes || 10,
-              order: lIdx + 1,
-              isPublished: true,
-              quizzes: l.quizzes || [],
-            })),
+            lessons: (m.lessons || []).map((l: any, lIdx: number) => {
+              const lesId = (idx + 1) * 100 + lIdx + 1;
+              const savedNote = savedNotesMap[lesId] || (localStorage.getItem(`atelier_study_note_${lesId}`) ? JSON.parse(localStorage.getItem(`atelier_study_note_${lesId}`)!) : null);
+              return savedNote || {
+                id: lesId,
+                module: idx + 1,
+                title: l.title,
+                slug: l.slug,
+                description: l.description || "",
+                content: `# ${l.title}\n\n${l.description || "Welcome to your study notes."}\n\n\`\`\`typescript\nfunction startLesson() {\n  console.log("Interactive curriculum ready!");\n}\n\`\`\`\n`,
+                difficulty: l.difficulty || "beginner",
+                tags: ["git", "open-source"],
+                estimatedMinutes: l.estimatedMinutes || 10,
+                order: lIdx + 1,
+                isPublished: true,
+                quizzes: l.quizzes || [],
+              };
+            }),
           }));
           setModules(mappedModules);
           if (mappedModules[0]?.lessons[0]) {
@@ -110,14 +114,26 @@ export function useContentDraft(initialLessonId?: number) {
     if (!draft.id) return;
     try {
       setSaveStatus("saving");
-      await api.put(`/content/lessons/${draft.id}/`, draft);
+      // Try backend save if API active
+      await api.put(`/content/lessons/${draft.id}/`, draft).catch(() => null);
+      
+      // Save into LocalStorage so notes & edits persist 100% locally
+      try {
+        localStorage.setItem(`atelier_study_note_${draft.id}`, JSON.stringify(draft));
+        const savedNotesMap = JSON.parse(localStorage.getItem("atelier_saved_notes_map") || "{}");
+        savedNotesMap[draft.id] = draft;
+        localStorage.setItem("atelier_saved_notes_map", JSON.stringify(savedNotesMap));
+      } catch (err) {
+        console.warn("LocalStorage save error:", err);
+      }
+
       setSaveStatus("saved");
       setIsDirty(false);
       setTimeout(() => {
         setSaveStatus("idle");
       }, 2000);
     } catch (err) {
-      console.error("Failed to autosave lesson draft:", err);
+      console.error("Failed to save study note:", err);
       setSaveStatus("error");
     }
   }, []);
@@ -130,13 +146,20 @@ export function useContentDraft(initialLessonId?: number) {
         setIsDirty(true);
         setSaveStatus("idle");
 
+        // Immediately update localStorage for instant persistence
+        if (next.id) {
+          try {
+            localStorage.setItem(`atelier_study_note_${next.id}`, JSON.stringify(next));
+          } catch {}
+        }
+
         if (saveTimerRef.current) {
           clearTimeout(saveTimerRef.current);
         }
 
         saveTimerRef.current = setTimeout(() => {
           saveDraft(next);
-        }, 3000);
+        }, 1500);
 
         return next;
       });

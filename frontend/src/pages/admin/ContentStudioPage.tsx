@@ -131,25 +131,44 @@ export function ContentStudioPage() {
     toast.success("Structured Markdown template inserted!");
   };
 
+  const handleImportMarkdown = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeLesson) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        updateActiveLesson({ content });
+        toast.success(`Imported "${file.name}" into study note!`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="w-full min-h-screen flex flex-col gap-6 bg-surface dark:bg-[#0a0a0f] text-text dark:text-[#f0ebe2]">
       {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b-2 border-black/10 dark:border-[#2e2924]">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text dark:text-[#f0ebe2] flex items-center gap-2">
-            <FileEdit className="w-8 h-8 text-accent" /> Content Authoring Studio
+            <FileEdit className="w-8 h-8 text-accent" /> Personal Study Notes &amp; Cheat Sheets
           </h1>
           <p className="text-sm font-medium text-muted dark:text-[#c4bbae]">
-            WYSIWYG Admin Editor for Lessons &amp; Quizzes with Live Preview &amp; Autosave.
+            Private Markdown Notebook for Lesson Annotations, Git Commands &amp; Code Snippets. Auto-saved locally.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs font-black px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer transition-all shadow-card-sm">
+            <Download className="w-4 h-4 rotate-180" /> Import .md
+            <input type="file" accept=".md,.txt" onChange={handleImportMarkdown} className="hidden" />
+          </label>
+
           <button
             onClick={handleExportCurriculumJSON}
             className="flex items-center gap-1.5 text-xs font-black px-3.5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-card-sm"
           >
-            <Download className="w-4 h-4 text-blue-500" /> Export JSON
+            <Download className="w-4 h-4 text-blue-500" /> Export Notes
           </button>
 
           {activeLesson && (
