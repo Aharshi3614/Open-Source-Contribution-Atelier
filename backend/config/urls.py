@@ -14,22 +14,23 @@ from apps.billing.webhooks import stripe_webhook
 from apps.dashboard.views import LeaderboardView
 
 from .health_view import health_view
-from .version_view import version_view
+from .version_view import version_view, api_versions_view
 
 urlpatterns = [
-    # ── Admin ──────────────────────────────────────────────────────────────────
+    # ── Django Admin & External Webhooks ──────────────────────────────────────
     path("admin/", admin.site.urls),
     path("api/admin/audit/", include("apps.audit.urls")),
     path("api/audit/", include("apps.audit.urls")),
     path("api/admin/", include("apps.monitoring.urls")),
     path("api/monitoring/", include("apps.monitoring.urls")),
+    path("api/admin/core/", include("apps.core.urls")),
 
     # ── Health Checks ──────────────────────────────────────────────────────────
     path("health/", include("apps.health.urls")),
-    # ── Legacy Health (keep for backward compatibility) ──────────────────────
     path("health/legacy/", health_view, name="health"),
-    # ── API Version ────────────────────────────────────────────────────────────
+    # ── Version Discovery (root /api/versions/) ─────────────────────────────
     path("api/version/", version_view, name="version"),
+    path("api/versions/", api_versions_view, name="root-api-versions"),
     # ── Leaderboard ────────────────────────────────────────────────────────────
     path("api/leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     # ── Authentication ─────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ urlpatterns = [
     # ============================================================
     # WEBHOOKS & UPLOADS
     # ============================================================
+    path("api/webhooks/", include("apps.webhooks.urls")),
     path("api/uploads/", include("apps.uploads.urls")),
     # ── RBAC ───────────────────────────────────────────────────────────────────
     path("api/rbac/", include("apps.rbac.urls")),
@@ -96,27 +98,15 @@ urlpatterns = [
     # ============================================================
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
+<<<<<<< HEAD
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),  # Fixed here
+=======
         "docs/",
         SpectacularSwaggerView.as_view(url_name="schema"),
+>>>>>>> 02ece0c8009596a33fbf5bc0bc7298ff74711560
         name="swagger-ui",
     ),
-]
-
-urlpatterns = [
-    # ── Django Admin & External Webhooks ──────────────────────────────────────
-    path("admin/", admin.site.urls),
-    path("accounts/", include("allauth.urls")),
-    path("create-checkout-session/", CheckoutSessionView.as_view()),
-    path("webhook/", stripe_webhook),
-    # ── Health Checks ──────────────────────────────────────────────────────────
-    path("health/", include("apps.health.urls")),
-    path("health/legacy/", health_view, name="health"),
-    # ── Version Discovery (root /api/versions/) ─────────────────────────────
-    path("api/versions/", api_versions_view, name="root-api-versions"),
-    # ── Stable Versioned API (/api/v1/) ───────────────────────────────────────
-    path("api/v1/", include(api_v1_patterns)),
-    # ── Unversioned API Fallback (/api/) ───────────────────────────────────────
-    path("api/", include(api_v1_patterns)),
 ]
 
 if settings.DEBUG:
@@ -125,4 +115,15 @@ if settings.DEBUG:
     urlpatterns += [
         path("api/v1/feature-flags/", include("apps.feature_flags.urls")),
         path("api/feature-flags/", include("apps.feature_flags.urls")),
+<<<<<<< HEAD
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path(
+            "api/docs/",
+            SpectacularSwaggerView.as_view(url_name="schema"),  # Fixed here as well
+            name="swagger-ui",
+        ),
+        path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
+=======
+>>>>>>> 02ece0c8009596a33fbf5bc0bc7298ff74711560
     ]
+    
