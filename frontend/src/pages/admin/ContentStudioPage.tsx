@@ -4,22 +4,23 @@ import {
   Folder,
   Plus,
   Trash2,
-  Save,
   Download,
   Upload,
   Eye,
   Edit3,
-  Sparkles,
   Check,
-  Globe,
   Tag,
   Clock,
   ChevronRight,
   ChevronDown,
-  BookOpen,
   HelpCircle,
-  Code2,
-  Copy,
+  Columns,
+  Search,
+  Sparkles,
+  Layers,
+  BookMarked,
+  Terminal,
+  Zap,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { MarkdownRenderer } from "../../components/ui/MarkdownRenderer";
@@ -47,36 +48,38 @@ export interface NoteItem {
 export interface FolderItem {
   id: string;
   title: string;
+  icon: string;
+  color: string;
 }
 
 const DEFAULT_FOLDERS: FolderItem[] = [
-  { id: "folder-git", title: "Git & Version Control" },
-  { id: "folder-[#open-source]", title: "Open Source Guidelines" },
-  { id: "folder-devops", title: "DevOps & CI/CD" },
+  { id: "folder-git", title: "Git & Branch Workflows", icon: "git", color: "from-amber-500/20 to-orange-500/10 border-amber-500/30" },
+  { id: "folder-opensource", title: "Open Source Etiquette", icon: "community", color: "from-blue-500/20 to-indigo-500/10 border-blue-500/30" },
+  { id: "folder-devops", title: "DevOps & CLI Reference", icon: "devops", color: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30" },
 ];
 
 const DEFAULT_NOTES: NoteItem[] = [
   {
     id: "note-1",
     folderId: "folder-git",
-    title: "Git Rebase & Branching Quick Reference",
-    content: `# Git Rebase & Branching Cheat Sheet
+    title: "Git Rebase & Interactive Squashing",
+    content: `# Git Rebase & Branching Masterclass
 
-## 🚀 Key Commands
+## 🚀 Interactive Rebase Commands
 
 \`\`\`bash
-# Create and switch to feature branch
-git checkout -b feature/awesome-update
-
-# Keep feature branch up-to-date with main
+# Rebase feature branch onto latest main
 git fetch origin
 git rebase origin/main
 
-# Abort rebase if conflicts get complex
+# Squash last 3 commits into one clean commit
+git rebase -i HEAD~3
+
+# Abort if conflicts get messy
 git rebase --abort
 \`\`\`
 
-> 💡 **Pro-Tip**: Always run \`git status\` before executing \`git rebase --continue\`.
+> 💡 **Pro-Tip**: Always run \`git status\` to verify working directory before continuing.
 `,
     tags: ["git", "rebase", "cli"],
     difficulty: "beginner",
@@ -85,28 +88,27 @@ git rebase --abort
     quizzes: [
       {
         id: 1,
-        question: "What command safely aborts an in-progress git rebase?",
-        options: ["git rebase --abort", "git reset --hard HEAD~1", "git checkout main", "git push --force"],
+        question: "What flag allows interactive commit squashing during a rebase?",
+        options: ["-i or --interactive", "-f or --force", "-m or --message", "-b or --branch"],
         answer: 0,
-        explanation: "git rebase --abort returns your working branch to its pre-rebase state.",
+        explanation: "git rebase -i opens an interactive editor to pick, squash, or edit commits.",
       },
     ],
   },
   {
     id: "note-2",
-    folderId: "folder-[#open-source]",
+    folderId: "folder-opensource",
     title: "Maintainer Code Review & PR Tone Guide",
-    content: `# Code Review & Communication Guidelines
+    content: `# Code Review & Communication Etiquette
 
-## 📖 Best Practices for Pull Request Reviews
+## 📖 Key Maintainer Principles
 
-1. **Be Constructive & Specific**: Explain *why* a change is requested.
-2. **Acknowledge Good Work**: Highlight well-written tests and clean architecture.
-3. **Distinguish Nitpicks**: Mark non-blocking feedback as \`[nit]\`.
+1. **Be Constructive**: Explain the rationale behind requested changes.
+2. **Highlight Excellence**: Applaud well-tested modules and clean code.
+3. **Use Nitpick Labels**: Mark non-blocking comments as \`[nit]\`.
 
 \`\`\`typescript
-// Example: Constructive Feedback
-// [nit]: Consider using optional chaining here to prevent null pointer exceptions
+// Example: Safe Nullish Coalescing
 const userEmail = response?.data?.user?.email ?? "N/A";
 \`\`\`
 `,
@@ -121,7 +123,7 @@ const userEmail = response?.data?.user?.email ?? "N/A";
 export function ContentStudioPage() {
   const [folders, setFolders] = useState<FolderItem[]>(() => {
     try {
-      const saved = localStorage.getItem("atelier_notes_folders_v2");
+      const saved = localStorage.getItem("atelier_notes_folders_v3");
       return saved ? JSON.parse(saved) : DEFAULT_FOLDERS;
     } catch {
       return DEFAULT_FOLDERS;
@@ -130,7 +132,7 @@ export function ContentStudioPage() {
 
   const [notes, setNotes] = useState<NoteItem[]>(() => {
     try {
-      const saved = localStorage.getItem("atelier_notes_items_v2");
+      const saved = localStorage.getItem("atelier_notes_items_v3");
       return saved ? JSON.parse(saved) : DEFAULT_NOTES;
     } catch {
       return DEFAULT_NOTES;
@@ -138,25 +140,22 @@ export function ContentStudioPage() {
   });
 
   const [activeNoteId, setActiveNoteId] = useState<string>(() => notes[0]?.id || "");
-  const [activeTab, setActiveTab] = useState<"editor" | "preview" | "quizzes" | "meta">("editor");
-  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("saved");
+  const [viewMode, setViewMode] = useState<"split" | "editor" | "preview" | "meta" | "quizzes">("split");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
 
-  // Auto-persist to localStorage
+  // Auto-persist state to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem("atelier_notes_folders_v2", JSON.stringify(folders));
-    } catch (e) {
-      console.warn("Failed saving folders:", e);
-    }
+      localStorage.setItem("atelier_notes_folders_v3", JSON.stringify(folders));
+    } catch {}
   }, [folders]);
 
   useEffect(() => {
     try {
-      localStorage.setItem("atelier_notes_items_v2", JSON.stringify(notes));
-    } catch (e) {
-      console.warn("Failed saving notes:", e);
-    }
+      localStorage.setItem("atelier_notes_items_v3", JSON.stringify(notes));
+    } catch {}
   }, [notes]);
 
   const activeNote = notes.find((n) => n.id === activeNoteId) || notes[0];
@@ -164,34 +163,38 @@ export function ContentStudioPage() {
   const updateActiveNote = (updates: Partial<NoteItem>) => {
     if (!activeNote) return;
     setSaveStatus("saving");
-    const updatedNote = {
-      ...activeNote,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    setNotes((prev) => prev.map((n) => (n.id === activeNote.id ? updatedNote : n)));
-
-    setTimeout(() => {
-      setSaveStatus("saved");
-    }, 400);
+    const updated = { ...activeNote, ...updates, updatedAt: new Date().toISOString() };
+    setNotes((prev) => prev.map((n) => (n.id === activeNote.id ? updated : n)));
+    setTimeout(() => setSaveStatus("saved"), 300);
   };
 
   const handleAddFolder = () => {
-    const title = prompt("Folder Name:", "New Study Folder");
+    const title = prompt("New Category Folder Name:", "New Category");
     if (!title) return;
-    const newFolder: FolderItem = { id: `folder-${Date.now()}`, title };
+    const colors = [
+      "from-amber-500/20 to-orange-500/10 border-amber-500/30",
+      "from-blue-500/20 to-indigo-500/10 border-blue-500/30",
+      "from-emerald-500/20 to-teal-500/10 border-emerald-500/30",
+      "from-purple-500/20 to-pink-500/10 border-purple-500/30",
+    ];
+    const newFolder: FolderItem = {
+      id: `folder-${Date.now()}`,
+      title,
+      icon: "git",
+      color: colors[folders.length % colors.length],
+    };
     setFolders((prev) => [...prev, newFolder]);
-    toast.success(`Folder "${title}" created!`);
+    toast.success(`Category "${title}" added!`);
   };
 
   const handleAddNote = (folderId: string) => {
-    const title = prompt("Note Title:", "New Study Note");
+    const title = prompt("New Note Title:", "New Study Note");
     if (!title) return;
     const newNote: NoteItem = {
       id: `note-${Date.now()}`,
       folderId,
       title,
-      content: `# ${title}\n\nStart typing your study notes or code snippets here...\n\n\`\`\`typescript\nfunction demo() {\n  return "Hello Atelier";\n}\n\`\`\`\n`,
+      content: `# ${title}\n\nStart typing notes or code snippets...\n\n\`\`\`typescript\nfunction demo() {\n  return "Atelier Knowledge Studio";\n}\n\`\`\`\n`,
       tags: ["notes"],
       difficulty: "beginner",
       estimatedMinutes: 5,
@@ -208,23 +211,21 @@ export function ContentStudioPage() {
     if (!confirm("Delete this study note?")) return;
     const remaining = notes.filter((n) => n.id !== id);
     setNotes(remaining);
-    if (activeNoteId === id && remaining.length > 0) {
-      setActiveNoteId(remaining[0].id);
-    }
+    if (activeNoteId === id && remaining.length > 0) setActiveNoteId(remaining[0].id);
     toast.success("Note removed");
   };
 
   const handleDeleteFolder = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this folder and its notes?")) return;
+    if (!confirm("Delete this category folder and its notes?")) return;
     setFolders((prev) => prev.filter((f) => f.id !== id));
     setNotes((prev) => prev.filter((n) => n.folderId !== id));
-    toast.success("Folder removed");
+    toast.success("Category folder removed");
   };
 
   const handleInsertFormatting = (prefix: string, suffix: string = "") => {
     if (!activeNote) return;
-    const textarea = document.getElementById("note-content-editor") as HTMLTextAreaElement;
+    const textarea = document.getElementById("studio-content-textarea") as HTMLTextAreaElement;
     if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
@@ -242,7 +243,7 @@ export function ContentStudioPage() {
       const content = event.target?.result as string;
       if (content) {
         updateActiveNote({ content });
-        toast.success(`Imported "${file.name}" into note!`);
+        toast.success(`Imported "${file.name}" into study note!`);
       }
     };
     reader.readAsText(file);
@@ -254,72 +255,106 @@ export function ContentStudioPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "atelier-study-notes.json";
+    a.download = "atelier-knowledge-studio.json";
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Study notes exported!");
+    toast.success("Knowledge Studio exported!");
   };
 
+  const filteredNotes = notes.filter(
+    (n) =>
+      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      n.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
-    <div className="w-full min-h-screen bg-surface dark:bg-[#0a0a0f] text-text dark:text-[#f0ebe2] space-y-6">
-      {/* Top Banner Header */}
-      <div className="w-full bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-black/50 border-2 border-black/10 dark:border-[#2e2924] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
-            <FileText className="w-7 h-7 text-indigo-400" /> Study Notes &amp; Cheat Sheets Studio
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1">
-            Private Markdown Notebook for Git Cheat Sheets, Code Snippets &amp; Annotations. Auto-Saved to Local Storage.
-          </p>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      {/* Top Symmetrical Header Deck */}
+      <div className="w-full bg-gradient-to-r from-[#181528] via-[#13111f] to-[#0d0c14] border-2 border-black/10 dark:border-[#2e2924] rounded-3xl p-6 shadow-card-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border-2 border-indigo-500/40 flex items-center justify-center shrink-0 text-indigo-400 shadow-card-sm">
+            <Layers className="w-7 h-7" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                Studio Deck &amp; Knowledge Base
+              </h1>
+              <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                Live Sync
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1">
+              Personalized Knowledge Vault • Git Cheat Sheets, Code Snippets &amp; Custom Annotations
+            </p>
+          </div>
         </div>
 
+        {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 dark:bg-black/40 border border-white/20 rounded-xl text-xs font-bold text-white">
-            <Check className="w-3.5 h-3.5 text-green-400" />
-            <span>{saveStatus === "saving" ? "Saving..." : "Auto-Saved"}</span>
+          <div className="flex items-center gap-1.5 px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-slate-300">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>{saveStatus === "saving" ? "Saving..." : "100% Persisted"}</span>
           </div>
 
-          <label className="flex items-center gap-1.5 text-xs font-black px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer transition-all shadow-sm">
-            <Upload className="w-3.5 h-3.5" /> Import .md
+          <label className="flex items-center gap-1.5 text-xs font-black px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer transition-all shadow-card-sm">
+            <Upload className="w-4 h-4" /> Import .md
             <input type="file" accept=".md,.txt" onChange={handleImportMarkdown} className="hidden" />
           </label>
 
           <button
             onClick={handleExportNotes}
-            className="flex items-center gap-1.5 text-xs font-black px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all shadow-sm"
+            className="flex items-center gap-1.5 text-xs font-black px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all shadow-card-sm"
           >
-            <Download className="w-3.5 h-3.5" /> Export Notes
+            <Download className="w-4 h-4" /> Export All
           </button>
         </div>
       </div>
 
-      {/* Main Workspace Layout */}
-      <div className="w-full flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Sidebar: Folder & Notes Directory */}
-        <div className="w-full lg:w-80 shrink-0 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl p-4 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-[#2e2924]">
-            <h2 className="font-black text-base text-text dark:text-[#f0ebe2] flex items-center gap-2">
-              <Folder className="w-4 h-4 text-amber-500" /> Note Directory
-            </h2>
-            <button
-              onClick={handleAddFolder}
-              className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" /> Folder
-            </button>
+      {/* Main Symmetrical Workspace: Left Directory Deck + Right Editor Deck */}
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Category Cards & Notes Directory (lg:col-span-5) */}
+        <div className="lg:col-span-5 space-y-4 w-full min-w-0">
+          {/* Directory Search & Add Bar */}
+          <div className="bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl p-4 space-y-3 shadow-card-sm">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-black text-base text-text dark:text-[#f0ebe2] flex items-center gap-2">
+                <BookMarked className="w-5 h-5 text-indigo-500" /> Knowledge Folders
+              </h2>
+              <button
+                onClick={handleAddFolder}
+                className="flex items-center gap-1 text-xs font-black px-3 py-1.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-card-sm"
+              >
+                <Plus className="w-3.5 h-3.5" /> New Folder
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-surface-low dark:bg-[#0f0e0c] border border-black/10 dark:border-[#2e2924] rounded-xl text-muted text-xs">
+              <Search className="w-4 h-4 shrink-0 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search notes or tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs w-full text-text dark:text-[#f0ebe2] placeholder:text-slate-400"
+              />
+            </div>
           </div>
 
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+          {/* Folder & Notes Grid Cards */}
+          <div className="space-y-4 max-h-[700px] overflow-y-auto pr-1">
             {folders.map((folder) => {
-              const folderNotes = notes.filter((n) => n.folderId === folder.id);
+              const folderNotes = filteredNotes.filter((n) => n.folderId === folder.id);
               const isCollapsed = collapsedFolders[folder.id];
 
               return (
                 <div
                   key={folder.id}
-                  className="border border-black/10 dark:border-[#2e2924] rounded-xl overflow-hidden bg-surface-low/30 dark:bg-black/20"
+                  className={`bg-gradient-to-br ${folder.color} bg-white dark:bg-[#151411] border-2 rounded-2xl overflow-hidden shadow-card-sm transition-all`}
                 >
-                  <div className="flex items-center justify-between px-3 py-2 bg-surface-low dark:bg-[#1c1a16] border-b border-black/5 dark:border-[#2e2924]">
+                  {/* Folder Card Title Header */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-surface-low/80 dark:bg-[#1a1714] border-b border-black/10 dark:border-[#2e2924]">
                     <button
                       onClick={() =>
                         setCollapsedFolders((prev) => ({
@@ -327,7 +362,7 @@ export function ContentStudioPage() {
                           [folder.id]: !prev[folder.id],
                         }))
                       }
-                      className="flex items-center gap-2 font-bold text-xs sm:text-sm text-text dark:text-[#f0ebe2] hover:text-indigo-400 transition-colors truncate flex-1 text-left"
+                      className="flex items-center gap-2.5 font-bold text-sm text-text dark:text-[#f0ebe2] hover:text-indigo-400 transition-colors text-left flex-1 truncate"
                     >
                       {isCollapsed ? (
                         <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
@@ -335,34 +370,35 @@ export function ContentStudioPage() {
                         <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                       )}
                       <span className="truncate">{folder.title}</span>
-                      <span className="text-[11px] font-mono text-slate-400">
-                        ({folderNotes.length})
+                      <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                        {folderNotes.length} notes
                       </span>
                     </button>
 
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleAddNote(folder.id)}
-                        title="Add Note"
-                        className="p-1 text-slate-500 hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors"
+                        title="Add Note to Folder"
+                        className="p-1.5 text-xs font-bold text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors flex items-center gap-1"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-4 h-4" /> Note
                       </button>
                       <button
                         onClick={(e) => handleDeleteFolder(folder.id, e)}
                         title="Delete Folder"
-                        className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
+                  {/* Notes List inside Folder Card */}
                   {!isCollapsed && (
-                    <div className="p-1.5 space-y-1">
+                    <div className="p-2 space-y-1.5">
                       {folderNotes.length === 0 ? (
-                        <div className="text-xs text-slate-400 italic px-3 py-2">
-                          No notes in this folder.
+                        <div className="text-xs text-slate-400 italic px-4 py-3 text-center">
+                          No notes in this category yet.
                         </div>
                       ) : (
                         folderNotes.map((note) => {
@@ -371,24 +407,38 @@ export function ContentStudioPage() {
                             <div
                               key={note.id}
                               onClick={() => setActiveNoteId(note.id)}
-                              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all border ${
                                 isActive
-                                  ? "bg-indigo-600 text-white font-bold shadow-xs"
-                                  : "hover:bg-black/5 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300"
+                                  ? "bg-indigo-600 text-white border-indigo-400 shadow-card-sm"
+                                  : "bg-white/60 dark:bg-black/30 border-black/5 dark:border-[#2e2924] hover:bg-white dark:hover:bg-black/50 text-text dark:text-[#f0ebe2]"
                               }`}
                             >
-                              <div className="flex items-center gap-2 truncate">
-                                <FileText className="w-3.5 h-3.5 shrink-0" />
+                              <div className="flex items-center gap-2.5 truncate">
+                                <FileText className="w-4 h-4 shrink-0 opacity-80" />
                                 <span className="truncate">{note.title}</span>
                               </div>
-                              <button
-                                onClick={(e) => handleDeleteNote(note.id, e)}
-                                className={`p-1 rounded transition-colors ${
-                                  isActive ? "hover:bg-indigo-700 text-white" : "text-slate-400 hover:text-red-500"
-                                }`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {note.tags[0] && (
+                                  <span
+                                    className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${
+                                      isActive
+                                        ? "bg-white/20 text-white"
+                                        : "bg-surface-low dark:bg-black/40 text-slate-400"
+                                    }`}
+                                  >
+                                    #{note.tags[0]}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={(e) => handleDeleteNote(note.id, e)}
+                                  className={`p-1 rounded hover:bg-red-500 hover:text-white transition-colors ${
+                                    isActive ? "text-white/80" : "text-slate-400"
+                                  }`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           );
                         })
@@ -401,68 +451,79 @@ export function ContentStudioPage() {
           </div>
         </div>
 
-        {/* Right Main Editor & Preview Panel */}
-        <div className="flex-1 w-full min-w-0 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+        {/* Right Column: Studio Editor Workspace Deck (lg:col-span-7) */}
+        <div className="lg:col-span-7 space-y-4 w-full min-w-0 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-3xl p-5 sm:p-6 shadow-card-sm">
           {activeNote ? (
             <>
-              {/* Note Header & Tab Controls */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-black/10 dark:border-[#2e2924]">
-                <div className="flex flex-col gap-1 min-w-0 w-full sm:w-auto">
+              {/* Studio Workspace Header Bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b-2 border-black/10 dark:border-[#2e2924]">
+                <div className="space-y-1 w-full sm:w-auto min-w-0">
                   <input
                     type="text"
                     value={activeNote.title}
                     onChange={(e) => updateActiveNote({ title: e.target.value })}
-                    className="font-black text-xl sm:text-2xl bg-transparent text-text dark:text-[#f0ebe2] border-b border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none transition-colors"
+                    className="font-black text-xl sm:text-2xl bg-transparent text-text dark:text-[#f0ebe2] border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none transition-colors w-full"
                   />
                   <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {new Date(activeNote.updatedAt).toLocaleTimeString()}
+                      <Clock className="w-3.5 h-3.5 text-indigo-400" /> {new Date(activeNote.updatedAt).toLocaleTimeString()}
                     </span>
                     <span>•</span>
-                    <span>{activeNote.content.length} chars</span>
+                    <span>{activeNote.content.length} characters</span>
                   </div>
                 </div>
 
-                {/* View Tabs */}
-                <div className="flex items-center gap-1 bg-surface-low dark:bg-black/30 p-1 rounded-xl border border-black/10 dark:border-[#2e2924] shrink-0">
+                {/* Symmetrical View Mode Segment Pills */}
+                <div className="flex items-center gap-1 bg-surface-low dark:bg-[#0a0a0f] p-1.5 rounded-2xl border-2 border-black/10 dark:border-[#2e2924] shrink-0 w-full sm:w-auto justify-around">
                   <button
-                    onClick={() => setActiveTab("editor")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      activeTab === "editor"
-                        ? "bg-indigo-600 text-white shadow-xs"
+                    onClick={() => setViewMode("split")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                      viewMode === "split"
+                        ? "bg-indigo-600 text-white shadow-card-sm"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
-                    <Edit3 className="w-3.5 h-3.5" /> Editor
+                    <Columns className="w-3.5 h-3.5" /> Split
                   </button>
 
                   <button
-                    onClick={() => setActiveTab("preview")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      activeTab === "preview"
-                        ? "bg-indigo-600 text-white shadow-xs"
+                    onClick={() => setViewMode("editor")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                      viewMode === "editor"
+                        ? "bg-indigo-600 text-white shadow-card-sm"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
-                    <Eye className="w-3.5 h-3.5" /> Live Preview
+                    <Edit3 className="w-3.5 h-3.5" /> Code Editor
                   </button>
 
                   <button
-                    onClick={() => setActiveTab("meta")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      activeTab === "meta"
-                        ? "bg-indigo-600 text-white shadow-xs"
+                    onClick={() => setViewMode("preview")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                      viewMode === "preview"
+                        ? "bg-indigo-600 text-white shadow-card-sm"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
-                    <Tag className="w-3.5 h-3.5" /> Tags &amp; Meta
+                    <Eye className="w-3.5 h-3.5" /> Preview
                   </button>
 
                   <button
-                    onClick={() => setActiveTab("quizzes")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      activeTab === "quizzes"
-                        ? "bg-indigo-600 text-white shadow-xs"
+                    onClick={() => setViewMode("meta")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                      viewMode === "meta"
+                        ? "bg-indigo-600 text-white shadow-card-sm"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Tag className="w-3.5 h-3.5" /> Meta
+                  </button>
+
+                  <button
+                    onClick={() => setViewMode("quizzes")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl transition-all ${
+                      viewMode === "quizzes"
+                        ? "bg-indigo-600 text-white shadow-card-sm"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
@@ -471,78 +532,125 @@ export function ContentStudioPage() {
                 </div>
               </div>
 
-              {/* Tab 1: Code & Markdown Editor */}
-              {activeTab === "editor" && (
+              {/* View Viewports */}
+              {viewMode === "split" && (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 h-[550px] items-stretch">
+                  {/* Editor Left */}
+                  <div className="flex flex-col border-2 border-black/10 dark:border-[#2e2924] rounded-2xl overflow-hidden bg-surface-low/30 dark:bg-[#0a0a0f]">
+                    <div className="flex items-center gap-1 p-2 bg-surface-low dark:bg-[#1a1714] border-b border-black/10 dark:border-[#2e2924]">
+                      <button
+                        onClick={() => handleInsertFormatting("# ")}
+                        className="px-2 py-1 text-xs font-black rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      >
+                        H1
+                      </button>
+                      <button
+                        onClick={() => handleInsertFormatting("## ")}
+                        className="px-2 py-1 text-xs font-black rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      >
+                        H2
+                      </button>
+                      <button
+                        onClick={() => handleInsertFormatting("**", "**")}
+                        className="px-2 py-1 text-xs font-bold rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      >
+                        B
+                      </button>
+                      <button
+                        onClick={() => handleInsertFormatting("*", "*")}
+                        className="px-2 py-1 text-xs italic font-bold rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      >
+                        I
+                      </button>
+                      <button
+                        onClick={() => handleInsertFormatting("\n\`\`\`typescript\n", "\n\`\`\`\n")}
+                        className="px-2 py-1 text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 rounded"
+                      >
+                        Code
+                      </button>
+                    </div>
+                    <textarea
+                      id="studio-content-textarea"
+                      value={activeNote.content}
+                      onChange={(e) => updateActiveNote({ content: e.target.value })}
+                      className="flex-1 p-4 bg-transparent font-mono text-xs sm:text-sm text-text dark:text-[#f0ebe2] outline-none resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Preview Right */}
+                  <div className="p-4 border-2 border-black/10 dark:border-[#2e2924] rounded-2xl overflow-y-auto bg-surface-low/20 dark:bg-[#0a0a0f]">
+                    <MarkdownRenderer content={activeNote.content} />
+                  </div>
+                </div>
+              )}
+
+              {viewMode === "editor" && (
                 <div className="space-y-3">
-                  {/* Quick Formatting Toolbar */}
-                  <div className="flex flex-wrap items-center gap-1 bg-surface-low dark:bg-[#1c1a16] p-1.5 rounded-xl border border-black/10 dark:border-[#2e2924]">
+                  <div className="flex flex-wrap items-center gap-1.5 bg-surface-low dark:bg-[#1a1714] p-2 rounded-2xl border border-black/10 dark:border-[#2e2924]">
                     <button
                       onClick={() => handleInsertFormatting("# ")}
-                      className="px-2.5 py-1 text-xs font-black rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      className="px-3 py-1 text-xs font-black rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
                     >
-                      H1
+                      Heading 1
                     </button>
                     <button
                       onClick={() => handleInsertFormatting("## ")}
-                      className="px-2.5 py-1 text-xs font-black rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      className="px-3 py-1 text-xs font-black rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
                     >
-                      H2
+                      Heading 2
                     </button>
                     <button
                       onClick={() => handleInsertFormatting("**", "**")}
-                      className="px-2.5 py-1 text-xs font-bold rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      className="px-3 py-1 text-xs font-bold rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
                     >
                       Bold
                     </button>
                     <button
                       onClick={() => handleInsertFormatting("*", "*")}
-                      className="px-2.5 py-1 text-xs italic font-bold rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      className="px-3 py-1 text-xs italic font-bold rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
                     >
                       Italic
                     </button>
                     <button
                       onClick={() => handleInsertFormatting("\n\`\`\`typescript\n", "\n\`\`\`\n")}
-                      className="px-2.5 py-1 text-xs font-mono rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold"
+                      className="px-3 py-1 text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 rounded-lg"
                     >
                       Code Block
                     </button>
                     <button
                       onClick={() => handleInsertFormatting("- ")}
-                      className="px-2.5 py-1 text-xs font-bold rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      className="px-3 py-1 text-xs font-bold rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
                     >
-                      List
+                      List Item
                     </button>
                     <button
                       onClick={() => handleInsertFormatting("> ")}
-                      className="px-2.5 py-1 text-xs font-bold rounded hover:bg-black/10 dark:hover:bg-white/10"
+                      className="px-3 py-1 text-xs font-bold rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
                     >
-                      Quote
+                      Quote Callout
                     </button>
                   </div>
 
                   <textarea
-                    id="note-content-editor"
+                    id="studio-content-textarea"
                     rows={18}
                     value={activeNote.content}
                     onChange={(e) => updateActiveNote({ content: e.target.value })}
-                    placeholder="Write markdown notes or code snippets..."
-                    className="w-full p-4 bg-surface-low/50 dark:bg-[#12110e] border-2 border-black/10 dark:border-[#2e2924] rounded-xl font-mono text-sm text-text dark:text-[#f0ebe2] outline-none focus:border-indigo-500 transition-colors resize-y leading-relaxed"
+                    className="w-full p-4 bg-surface-low/50 dark:bg-[#0a0a0f] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl font-mono text-sm text-text dark:text-[#f0ebe2] outline-none focus:border-indigo-500 transition-colors leading-relaxed"
                   />
                 </div>
               )}
 
-              {/* Tab 2: Live HTML Markdown Preview */}
-              {activeTab === "preview" && (
-                <div className="p-4 bg-surface-low/30 dark:bg-[#12110e] border-2 border-black/10 dark:border-[#2e2924] rounded-xl min-h-[450px] max-h-[600px] overflow-y-auto">
+              {viewMode === "preview" && (
+                <div className="p-6 bg-surface-low/30 dark:bg-[#0a0a0f] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl min-h-[500px] max-h-[650px] overflow-y-auto">
                   <MarkdownRenderer content={activeNote.content} />
                 </div>
               )}
 
-              {/* Tab 3: Tags & Metadata */}
-              {activeTab === "meta" && (
+              {viewMode === "meta" && (
                 <div className="space-y-4 p-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-black uppercase text-slate-400">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-400">
                       Tags (comma-separated)
                     </label>
                     <input
@@ -553,13 +661,13 @@ export function ContentStudioPage() {
                           tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean),
                         })
                       }
-                      className="w-full p-3 bg-surface-low dark:bg-[#1c1a16] border border-black/10 dark:border-[#2e2924] rounded-xl font-mono text-sm outline-none"
+                      className="w-full p-3 bg-surface-low dark:bg-[#0a0a0f] border border-black/10 dark:border-[#2e2924] rounded-xl font-mono text-sm outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-black uppercase text-slate-400">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">
                         Difficulty Rating
                       </label>
                       <select
@@ -569,7 +677,7 @@ export function ContentStudioPage() {
                             difficulty: e.target.value as any,
                           })
                         }
-                        className="w-full p-3 bg-surface-low dark:bg-[#1c1a16] border border-black/10 dark:border-[#2e2924] rounded-xl font-bold text-sm outline-none"
+                        className="w-full p-3 bg-surface-low dark:bg-[#0a0a0f] border border-black/10 dark:border-[#2e2924] rounded-xl font-bold text-sm outline-none"
                       >
                         <option value="beginner">Beginner</option>
                         <option value="intermediate">Intermediate</option>
@@ -577,9 +685,9 @@ export function ContentStudioPage() {
                       </select>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-black uppercase text-slate-400">
-                        Estimated Reading Minutes
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                        Estimated Reading Time (mins)
                       </label>
                       <input
                         type="number"
@@ -587,15 +695,14 @@ export function ContentStudioPage() {
                         onChange={(e) =>
                           updateActiveNote({ estimatedMinutes: Number(e.target.value) })
                         }
-                        className="w-full p-3 bg-surface-low dark:bg-[#1c1a16] border border-black/10 dark:border-[#2e2924] rounded-xl font-bold text-sm outline-none"
+                        className="w-full p-3 bg-surface-low dark:bg-[#0a0a0f] border border-black/10 dark:border-[#2e2924] rounded-xl font-bold text-sm outline-none"
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Tab 4: Interactive Quiz Builder */}
-              {activeTab === "quizzes" && (
+              {viewMode === "quizzes" && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-base text-text dark:text-[#f0ebe2]">
@@ -605,30 +712,30 @@ export function ContentStudioPage() {
                       onClick={() => {
                         const newQ: QuizItem = {
                           id: Date.now(),
-                          question: "New Quiz Question?",
+                          question: "New Self-Test Question?",
                           options: ["Option A", "Option B", "Option C", "Option D"],
                           answer: 0,
-                          explanation: "Explanation for the correct answer.",
+                          explanation: "Explanation for the correct choice.",
                         };
                         updateActiveNote({ quizzes: [...activeNote.quizzes, newQ] });
                         toast.success("Question added!");
                       }}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all shadow-card-sm"
                     >
                       + Add Question
                     </button>
                   </div>
 
                   {activeNote.quizzes.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400 text-sm italic">
-                      No quiz questions added to this note yet. Click "+ Add Question" to create self-test quizzes.
+                    <div className="text-center py-16 text-slate-400 text-sm italic">
+                      No quiz questions in this study note. Click "+ Add Question" to create self-test quizzes.
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {activeNote.quizzes.map((quiz, qIdx) => (
                         <div
                           key={quiz.id}
-                          className="p-4 bg-surface-low/50 dark:bg-[#12110e] border border-black/10 dark:border-[#2e2924] rounded-xl space-y-3"
+                          className="p-4 bg-surface-low/50 dark:bg-[#0a0a0f] border border-black/10 dark:border-[#2e2924] rounded-2xl space-y-3"
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-black text-xs text-indigo-400">
@@ -654,7 +761,7 @@ export function ContentStudioPage() {
                               );
                               updateActiveNote({ quizzes: updated });
                             }}
-                            className="w-full p-2 bg-white dark:bg-[#1a1714] border border-black/10 dark:border-[#2e2924] rounded-lg font-bold text-sm outline-none"
+                            className="w-full p-2.5 bg-white dark:bg-[#1a1714] border border-black/10 dark:border-[#2e2924] rounded-xl font-bold text-sm outline-none"
                           />
                         </div>
                       ))}
@@ -664,7 +771,7 @@ export function ContentStudioPage() {
               )}
             </>
           ) : (
-            <div className="text-center py-20 text-slate-400 text-sm">
+            <div className="text-center py-24 text-slate-400 text-sm">
               No note selected. Select a note from the left directory or click "+ Note" to create one.
             </div>
           )}
