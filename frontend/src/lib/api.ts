@@ -187,35 +187,14 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
         lastError = new Error(errorMessage);
 
         if (!suppressErrorToast) {
-          switch (response.status) {
-            case 400:
-              toast.error(
-                errorMessage || "Invalid request. Please check your inputs.",
-              );
-              break;
-            case 401:
-              clearAccessToken();
-              try {
-                localStorage.removeItem("refreshToken");
-              } catch {
-                /* storage unavailable */
-              }
-              broadcastAuthEvent("LOGOUT");
-              toast.error("Session expired. Please log in again.");
-              break;
-            case 403:
-              toast.error("You do not have permission to perform this action.");
-              break;
-            case 429:
-              toast.error(
-                errorMessage || "Too many requests. Please slow down!",
-              );
-              break;
-            case 500:
-              toast.error("Server error. Our team has been notified.");
-              break;
-            default:
-              toast.error(errorMessage);
+          if (response.status === 401) {
+            clearAccessToken();
+            try {
+              localStorage.removeItem("refreshToken");
+            } catch {
+              /* storage unavailable */
+            }
+            broadcastAuthEvent("LOGOUT");
           }
         }
 
