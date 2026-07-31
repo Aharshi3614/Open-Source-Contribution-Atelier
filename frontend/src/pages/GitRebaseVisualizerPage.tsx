@@ -1,19 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   GitBranch,
   GitCommit,
   Play,
   CheckCircle2,
-  Sparkles,
   Terminal,
-  Layers,
-  Award,
-  HelpCircle,
-  RotateCcw,
-  BookOpen,
-  ArrowRight,
-  Info,
-  ShieldCheck,
   Zap,
 } from "lucide-react";
 import { RebaseCommitGraph, RebaseCommit } from "../components/Sandbox/RebaseCommitGraph";
@@ -37,7 +28,7 @@ const REAL_WORLD_SCENARIOS: RebaseScenario[] = [
     title: "1. Squash 5 'WIP' Commits Before PR Review",
     difficulty: "Beginner",
     xp_reward: 150,
-    description: "You pushed 5 small 'wip' draft commits while working on your feature PR. Maintainers requested squashing them into 1 single clean commit.",
+    description: "You pushed 5 small draft commits while working on your feature PR. Maintainers requested squashing them into 1 single clean commit.",
     base_branch: "main",
     initial_commits: [
       { hash: "a1b2c3d", message: "feat(auth): implement user login API route", author: "contributor", files_changed: ["src/auth.ts"], action: "pick" },
@@ -49,7 +40,7 @@ const REAL_WORLD_SCENARIOS: RebaseScenario[] = [
   },
   {
     id: "reword-and-drop",
-    title: "2. Reword Vague Messages & Drop Debug Logs",
+    title: "2. Reword Vague Messages & Drop Debug Code",
     difficulty: "Intermediate",
     xp_reward: 200,
     description: "Fix non-descriptive commit titles with 'reword' and drop temporary debug print commits ('TEMP debug statement') with 'drop'.",
@@ -85,7 +76,7 @@ export const PORT = process.env.PORT || 3000;
   },
 ];
 
-export const GitRebaseVisualizerPage: React.FC = () => {
+export function GitRebaseVisualizerPage() {
   const [scenarios] = useState<RebaseScenario[]>(REAL_WORLD_SCENARIOS);
   const [activeScenario, setActiveScenario] = useState<RebaseScenario>(REAL_WORLD_SCENARIOS[0]);
   const [commits, setCommits] = useState<RebaseCommit[]>(REAL_WORLD_SCENARIOS[0].initial_commits);
@@ -154,24 +145,24 @@ export const GitRebaseVisualizerPage: React.FC = () => {
   };
 
   return (
-    <main id="main-content" className="w-full max-w-7xl mx-auto space-y-6 text-text dark:text-[#f0ebe2]">
-      {/* Header Banner Deck */}
-      <div className="w-full bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-black/50 border-2 border-black/10 dark:border-[#2e2924] rounded-3xl p-6 shadow-card-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <main id="main-content" className="w-full max-w-[1600px] mx-auto space-y-6 text-text dark:text-[#f0ebe2] px-2 sm:px-4 lg:px-6">
+      {/* Header Banner Deck - Neo-Brutalist Theme */}
+      <div className="w-full bg-white dark:bg-[#151411] border-4 border-black dark:border-[#2e2924] rounded-3xl p-6 shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border-2 border-purple-500/40 flex items-center justify-center shrink-0 text-purple-400 shadow-card-sm">
+          <div className="w-14 h-14 rounded-2xl bg-[#C3C0FF] border-2 border-black flex items-center justify-center shrink-0 text-black shadow-card-sm">
             <GitBranch className="w-7 h-7" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                Git Rebase Interactive Simulator
+              <h1 className="text-2xl sm:text-3xl font-display font-black uppercase tracking-tight text-black dark:text-white">
+                Git Interactive Rebase Studio
               </h1>
-              <span className="text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <span className="text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded-md bg-[#C3C0FF] text-black border-2 border-black">
                 Interactive Lab
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1">
-              Master <code className="font-mono text-amber-400 font-bold">git rebase -i</code> in real-life open source scenarios. Squash WIP commits, reword titles, and resolve conflicts.
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-bold mt-1">
+              Master <code className="font-mono text-black dark:text-white bg-amber-300 px-1.5 py-0.5 rounded border border-black font-black">git rebase -i</code> in real-life open source scenarios. Squash WIP commits, reword titles, and resolve conflicts.
             </p>
           </div>
         </div>
@@ -182,10 +173,10 @@ export const GitRebaseVisualizerPage: React.FC = () => {
             <button
               key={sc.id}
               onClick={() => handleSelectScenario(sc)}
-              className={`px-4 py-2 text-xs font-black rounded-xl whitespace-nowrap transition-all shadow-card-sm ${
+              className={`px-4 py-2.5 text-xs font-black rounded-xl whitespace-nowrap transition-all border-2 border-black ${
                 activeScenario.id === sc.id
-                  ? "bg-purple-600 text-white border-2 border-purple-400"
-                  : "bg-white dark:bg-[#151411] text-slate-600 dark:text-slate-300 hover:text-text border-2 border-black/10 dark:border-[#2e2924]"
+                  ? "bg-[#C3C0FF] text-black shadow-card"
+                  : "bg-white dark:bg-[#151411] text-text dark:text-white hover:bg-gray-100 dark:hover:bg-[#1f1c18] shadow-card-sm"
               }`}
             >
               {sc.title}
@@ -195,57 +186,57 @@ export const GitRebaseVisualizerPage: React.FC = () => {
       </div>
 
       {/* Challenge Goal & Action Bar */}
-      <div className="bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-card-sm">
+      <div className="bg-white dark:bg-[#151411] border-4 border-black dark:border-[#2e2924] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-card">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">
-              Active Challenge Goal:
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Active Scenario:
             </span>
-            <span className="px-2.5 py-0.5 text-[10px] font-mono font-black text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-md">
+            <span className="px-2.5 py-0.5 text-[10px] font-mono font-black text-black bg-amber-300 border-2 border-black rounded-md">
               +{activeScenario.xp_reward} Contributor XP
             </span>
           </div>
-          <p className="text-xs sm:text-sm font-bold text-text dark:text-[#f0ebe2]">{activeScenario.description}</p>
+          <p className="text-xs sm:text-sm font-black text-black dark:text-[#f0ebe2]">{activeScenario.description}</p>
         </div>
 
         <button
           onClick={handleExecuteRebase}
           disabled={isExecuting}
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-card-sm transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95"
+          className="px-6 py-3 bg-[#C3C0FF] hover:bg-[#b0adff] text-black border-2 border-black text-xs font-black rounded-xl shadow-card transition-all flex items-center justify-center gap-2 shrink-0 active:translate-y-0.5"
         >
-          <Play className="w-4 h-4 fill-white" />
+          <Play className="w-4 h-4 fill-black" />
           {isExecuting ? "Executing Rebase..." : "Run Rebase (git rebase -i)"}
         </button>
       </div>
 
       {/* Completion Celebration Alert */}
       {isCompleted && (
-        <div className="p-5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl flex items-center justify-between shadow-card-sm animate-fadeIn">
+        <div className="p-5 bg-emerald-400 text-black border-4 border-black rounded-2xl flex items-center justify-between shadow-card animate-fadeIn">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl">
+            <div className="p-2.5 bg-black text-white rounded-xl">
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-black text-emerald-600 dark:text-emerald-400">
+              <h3 className="text-base font-black uppercase">
                 Rebase Scenario Mastered!
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                You successfully mastered this open-source Git workflow and earned <strong className="text-amber-500">+{earnedXP} Contributor XP</strong>.
+              <p className="text-xs font-bold">
+                You successfully mastered this open-source Git workflow and earned <strong>+{earnedXP} Contributor XP</strong>.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Interactive Rebase Workspace */}
+      {/* Interactive Rebase Workspace - 100% Fluid Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Interactive Commit DAG Graph & Action Selector */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-black text-text dark:text-[#f0ebe2] uppercase tracking-wider flex items-center gap-2">
-              <GitCommit className="w-4 h-4 text-purple-500" /> Interactive Commit TODO List
+        {/* Interactive Commit TODO List */}
+        <div className="lg:col-span-7 space-y-4 bg-white dark:bg-[#151411] border-4 border-black dark:border-[#2e2924] rounded-2xl p-5 shadow-card">
+          <div className="flex items-center justify-between pb-3 border-b-2 border-black dark:border-[#2e2924]">
+            <h2 className="text-sm font-black text-black dark:text-[#f0ebe2] uppercase tracking-wider flex items-center gap-2">
+              <GitCommit className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Interactive Commit TODO List
             </h2>
-            <span className="text-xs font-mono text-slate-400">Drag or click actions to squash/reword</span>
+            <span className="text-xs font-mono font-bold text-slate-500">Pick / Reword / Squash / Drop</span>
           </div>
 
           <RebaseCommitGraph
@@ -255,51 +246,56 @@ export const GitRebaseVisualizerPage: React.FC = () => {
           />
         </div>
 
-        {/* Terminal Execution Log & Educational Cheat Sheet */}
+        {/* Terminal Execution Log & Guide */}
         <div className="lg:col-span-5 space-y-4">
-          <h2 className="text-sm font-black text-text dark:text-[#f0ebe2] uppercase tracking-wider flex items-center gap-2">
-            <Terminal className="w-4 h-4 text-amber-500" /> Terminal Execution Log
-          </h2>
+          <div className="bg-[#0f0e0c] border-4 border-black dark:border-[#2e2924] rounded-2xl p-4 font-mono text-xs shadow-card text-[#f0ebe2] space-y-3">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <span className="text-xs font-black text-amber-400 uppercase flex items-center gap-2">
+                <Terminal className="w-4 h-4" /> Terminal Rebase Log
+              </span>
+              <span className="text-[10px] text-slate-500">CLI Simulator</span>
+            </div>
 
-          <div className="h-[380px] p-4 bg-surface-low dark:bg-[#0a0a0f] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl font-mono text-xs space-y-2 overflow-y-auto">
-            <p className="text-slate-500"># Interactive Rebase Instruction Execution</p>
-            {commits.map((c, i) => (
-              <div key={i} className="text-slate-400 flex items-center gap-2">
-                <span className="text-amber-500 font-bold uppercase text-[10px] w-12">{c.action || "pick"}</span>
-                <span className="text-indigo-400">{c.hash.substring(0, 7)}</span>
-                <span className="truncate">{c.new_message || c.message}</span>
-              </div>
-            ))}
-
-            <div className="pt-4 border-t border-black/10 dark:border-[#2e2924] space-y-1">
-              {executionLogs.map((log, idx) => (
-                <p key={idx} className="text-emerald-500 dark:text-emerald-400 font-semibold">
-                  {log}
-                </p>
+            <div className="h-[320px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              <p className="text-slate-500"># Interactive Rebase instruction Todo list</p>
+              {commits.map((c, i) => (
+                <div key={i} className="text-slate-400 flex items-center gap-2">
+                  <span className="text-amber-400 font-bold uppercase text-[10px] w-14 shrink-0">{c.action || "pick"}</span>
+                  <span className="text-indigo-400 shrink-0">{c.hash.substring(0, 7)}</span>
+                  <span className="truncate">{c.new_message || c.message}</span>
+                </div>
               ))}
+
+              <div className="pt-3 border-t border-white/10 space-y-1">
+                {executionLogs.map((log, idx) => (
+                  <p key={idx} className="text-emerald-400 font-bold">
+                    {log}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Educational IRL Rebase Guide Card */}
-          <div className="p-5 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl space-y-3 shadow-card-sm">
-            <h3 className="font-black text-sm text-text dark:text-[#f0ebe2] flex items-center gap-2">
+          {/* Educational Command Guide Card */}
+          <div className="p-5 bg-white dark:bg-[#151411] border-4 border-black dark:border-[#2e2924] rounded-2xl space-y-3 shadow-card">
+            <h3 className="font-black text-sm text-black dark:text-white flex items-center gap-2 uppercase">
               <Zap className="w-4 h-4 text-amber-500" /> Real-World Git Rebase Commands
             </h3>
-            <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+            <ul className="space-y-2 text-xs font-bold text-slate-700 dark:text-slate-300">
               <li className="flex items-start gap-2">
-                <span className="font-mono font-bold text-emerald-500 shrink-0">pick:</span>
+                <span className="font-mono font-black text-emerald-600 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-black shrink-0">pick</span>
                 <span>Keep the commit as-is in history.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-mono font-bold text-purple-500 shrink-0">squash:</span>
+                <span className="font-mono font-black text-purple-600 bg-purple-100 dark:bg-purple-950 px-1.5 py-0.5 rounded border border-black shrink-0">squash</span>
                 <span>Combine commit into previous commit and merge commit messages.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-mono font-bold text-cyan-500 shrink-0">reword:</span>
+                <span className="font-mono font-black text-cyan-600 bg-cyan-100 dark:bg-cyan-950 px-1.5 py-0.5 rounded border border-black shrink-0">reword</span>
                 <span>Keep commit changes but rewrite title/message.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-mono font-bold text-rose-500 shrink-0">drop:</span>
+                <span className="font-mono font-black text-rose-600 bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded border border-black shrink-0">drop</span>
                 <span>Completely delete commit from branch history.</span>
               </li>
             </ul>
@@ -330,6 +326,6 @@ export const GitRebaseVisualizerPage: React.FC = () => {
       )}
     </main>
   );
-};
+}
 
 export default GitRebaseVisualizerPage;
