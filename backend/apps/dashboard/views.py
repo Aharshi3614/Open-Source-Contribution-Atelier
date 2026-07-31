@@ -460,6 +460,15 @@ class ContributorDashboardView(APIView):
                 "next_milestone": MilestoneTrackService.get_user_next_milestone(user),
             }
 
+        elif field == "weekly_goal":
+            from apps.progress.models import WeeklyGoal
+            goal = WeeklyGoal.get_or_create_current(user)
+            return {
+                "target_lessons": goal.target_lessons,
+                "target_xp": goal.target_xp,
+                "target_minutes": goal.target_minutes,
+            }
+
     def get(self, request):
         users = User.objects.filter(
             is_active=True
@@ -481,6 +490,7 @@ class ContributorDashboardView(APIView):
                 "recent_prs",
                 "progress_tracker",
                 "active_track",
+                "weekly_goal",
             ]
 
         data = {}
@@ -491,6 +501,7 @@ class ContributorDashboardView(APIView):
                 "recent_prs",
                 "progress_tracker",
                 "active_track",
+                "weekly_goal",
             ]:
                 continue
 
@@ -502,6 +513,7 @@ class ContributorDashboardView(APIView):
             data[field] = field_data
 
         return Response(data)
+
 
 
 class ModeratorAnalyticsView(APIView):
