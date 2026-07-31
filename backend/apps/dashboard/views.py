@@ -470,10 +470,13 @@ class ContributorDashboardView(APIView):
             }
 
     def get(self, request):
-        users = (
-            User.objects.filter(is_active=True)
-            .annotate(total_xp=F("progress__xp"))
-            .order_by("-total_xp", "username")
+         users = User.objects.filter(
+            is_active=True
+        ).annotate(
+            total_xp=F('progress__xp')
+        ).order_by(
+            '-total_xp',  
+            'username'   
         )
         user = request.user
 
