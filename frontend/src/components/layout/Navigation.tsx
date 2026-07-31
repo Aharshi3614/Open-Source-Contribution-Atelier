@@ -299,27 +299,27 @@ export function Navigation() {
       </aside>
 
       <header className="fixed inset-x-0 top-0 z-30 h-[72px] border-b-4 border-black bg-white lg:left-[240px] dark:border-[#2e2924] dark:bg-[#0f0e0c]">
-        <div className="flex h-full items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8 max-w-full overflow-hidden">
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="flex h-full items-center justify-between gap-1.5 sm:gap-4 px-2 sm:px-6 lg:px-8 max-w-full overflow-hidden">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden rounded-lg border-2 border-black p-2 menu-btn bg-white dark:bg-[#151411] dark:border-[#2e2924]"
+              className="lg:hidden rounded-lg border-2 border-black p-1.5 sm:p-2 menu-btn bg-white dark:bg-[#151411] dark:border-[#2e2924]"
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? "Close mobile menu" : "Open mobile menu"}
               aria-controls="mobile-menu"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
             <Link
               to="/"
-              className="lg:hidden font-display text-lg font-black tracking-tight text-black dark:text-white uppercase"
+              className="hidden min-[380px]:inline-block lg:hidden font-display text-base font-black tracking-tight text-black dark:text-white uppercase shrink-0"
             >
               Atelier
             </Link>
           </div>
 
           {/* Search bar input container - responsive width */}
-          <div className="flex min-w-0 items-center space-x-2 relative grow max-w-[150px] xs:max-w-[220px] sm:max-w-md">
+          <div className="flex min-w-0 items-center space-x-1 sm:space-x-2 relative grow max-w-[120px] min-[380px]:max-w-[170px] sm:max-w-md">
             <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-2.5 py-1.5 sm:px-3 sm:py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-slate-200 dark:focus-within:bg-[#0f0e0c]">
               <label htmlFor="nav-search-input" className="sr-only">
                 Search features, tools, lessons, pages
