@@ -206,6 +206,24 @@ class UserProfile(models.Model):
     def __repr__(self):
         return f"<UserProfile: {self.user.username}>"
 
+    @property
+    def local_today(self):
+        """
+        Return the current date in the user's configured timezone.
+        Falls back to UTC if the timezone is invalid or not set.
+        """
+        import zoneinfo
+
+        from django.utils import timezone
+
+        tz_name = self.timezone or "UTC"
+        try:
+            user_tz = zoneinfo.ZoneInfo(tz_name)
+        except Exception:
+            user_tz = zoneinfo.ZoneInfo("UTC")
+
+        return timezone.now().astimezone(user_tz).date()
+
     def increment_jwt_version(self):
         """
         Increment JWT token version to invalidate all existing tokens.
