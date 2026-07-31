@@ -93,13 +93,19 @@ const navGroups = [
     ],
   },
   {
+    title: "Documentation",
+    items: [
+      { to: "/docs/fullstack", label: "Full-Stack Docs", icon: BookOpen },
+      { to: "/docs/env-generator", label: ".env Wizard", icon: SlidersHorizontal },
+      { to: "/docs/websocket-simulator", label: "WS Simulator", icon: Activity },
+    ],
+  },
+  {
     title: "Account",
     items: [
       { to: "/profile", label: "Settings", icon: Settings },
       { to: "/settings/webhooks", label: "Webhooks", icon: Radio },
       { to: "/settings/connected-apps", label: "Connected Apps", icon: Shield },
-      { to: "/docs/env-generator", label: ".env Wizard", icon: SlidersHorizontal },
-      { to: "/docs/websocket-simulator", label: "WS Simulator", icon: Activity },
       { to: "/admin/oauth-clients", label: "OAuth Apps", icon: Key },
       { to: "/admin/celery", label: "Celery Tasks", icon: Cpu },
       { to: "/admin/audit", label: "Audit Logs", icon: SlidersHorizontal },
@@ -352,6 +358,12 @@ export function Navigation() {
             )}
           </div>
           <div className="flex items-center space-x-3">
+            <Link
+              to="/docs/fullstack"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+            >
+              <BookOpen size={14} /> Full-Stack Docs
+            </Link>
             <Link
               to="/dashboard"
               className="hidden rounded-lg px-3 py-2 text-sm font-medium text-primary md:inline-flex"

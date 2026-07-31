@@ -38,6 +38,9 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/users/", include("apps.accounts.user_urls")),
+    # ── OAuth 2.0 & OpenID Connect ──────────────────────────────────────────────
+    path("oauth/", include("apps.oauth.urls")),
+    path("", include("apps.oauth.urls")),
     # ── Core Apps ──────────────────────────────────────────────────────────────
     path("api/content/", include("apps.content.urls")),
     path("api/lessons/<str:lesson_id>/notes", LessonNoteAPIView.as_view(), name="api-lesson-notes"),

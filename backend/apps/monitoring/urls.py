@@ -7,6 +7,7 @@ from apps.monitoring.views import (
     CeleryStatsView,
     TaskRunViewSet,
     TaskTypeStatsView,
+    TriggerTaskView,
 )
 
 router = DefaultRouter()
@@ -17,5 +18,6 @@ urlpatterns = [
     path("metrics/", metrics_view, name="prometheus-metrics"),
     path("celery-stats/", CeleryStatsView.as_view(), name="celery-stats"),
     path("celery-task-stats/", TaskTypeStatsView.as_view(), name="celery-task-stats"),
+    path("celery-trigger-task/", TriggerTaskView.as_view(), name="celery-trigger-task"),
     path("", include(router.urls)),
 ]
