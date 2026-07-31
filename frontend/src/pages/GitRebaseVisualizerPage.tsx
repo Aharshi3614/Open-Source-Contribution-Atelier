@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   GitBranch,
   GitCommit,
-  RotateCcw,
   Play,
   CheckCircle2,
   Sparkles,
@@ -10,80 +9,96 @@ import {
   Layers,
   Award,
   HelpCircle,
+  RotateCcw,
+  BookOpen,
+  ArrowRight,
+  Info,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { RebaseCommitGraph, RebaseCommit } from "../components/Sandbox/RebaseCommitGraph";
 import { RebaseControlsModal } from "../components/Sandbox/RebaseControlsModal";
+import toast from "react-hot-toast";
 
 interface RebaseScenario {
   id: string;
   title: string;
-  difficulty: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
   xp_reward: number;
   description: string;
   base_branch: string;
   initial_commits: RebaseCommit[];
+  conflicts?: { commit_hash: string; file: string; conflict_hunk: string }[];
 }
 
-const DEFAULT_SCENARIOS: RebaseScenario[] = [
+const REAL_WORLD_SCENARIOS: RebaseScenario[] = [
   {
-    id: "squash-5-to-1",
-    title: "Squash 5 WIP Draft Commits before PR Merge",
+    id: "squash-wip",
+    title: "1. Squash 5 'WIP' Commits Before PR Review",
     difficulty: "Beginner",
     xp_reward: 150,
-    description: "You created 5 small 'wip' commits while building a feature. Use interactive rebase to squash them into 1 clean commit.",
+    description: "You pushed 5 small 'wip' draft commits while working on your feature PR. Maintainers requested squashing them into 1 single clean commit.",
     base_branch: "main",
     initial_commits: [
-      { hash: "a1b2c3d", message: "feat: add user authentication form", author: "contributor", files_changed: ["src/auth.ts"], action: "pick" },
-      { hash: "e4f5g6h", message: "wip fix typo in auth", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
-      { hash: "i7j8k9l", message: "wip add validation regex", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
-      { hash: "m0n1o2p", message: "wip update styles", author: "contributor", files_changed: ["src/styles.css"], action: "squash" },
-      { hash: "q3r4s5t", message: "wip cleanup console.log", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
+      { hash: "a1b2c3d", message: "feat(auth): implement user login API route", author: "contributor", files_changed: ["src/auth.ts"], action: "pick" },
+      { hash: "e4f5g6h", message: "wip fix typo in auth validator", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
+      { hash: "i7j8k9l", message: "wip add regex password check", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
+      { hash: "m0n1o2p", message: "wip fix linter warnings", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
+      { hash: "q3r4s5t", message: "wip remove console.log", author: "contributor", files_changed: ["src/auth.ts"], action: "squash" },
     ],
   },
   {
-    id: "reword-and-clean",
-    title: "Reword Bad Messages & Drop Debug Code",
+    id: "reword-and-drop",
+    title: "2. Reword Vague Messages & Drop Debug Logs",
     difficulty: "Intermediate",
     xp_reward: 200,
-    description: "Fix non-descriptive commit messages with 'reword' and remove temporary debug logging commits with 'drop'.",
+    description: "Fix non-descriptive commit titles with 'reword' and drop temporary debug print commits ('TEMP debug statement') with 'drop'.",
     base_branch: "main",
     initial_commits: [
-      { hash: "b8c9d0e", message: "add stuff", author: "contributor", files_changed: ["src/api.ts"], action: "reword", new_message: "feat: implement API retry adapter" },
-      { hash: "f1g2h3i", message: "TEMP: debug print statements", author: "contributor", files_changed: ["src/api.ts"], action: "drop" },
-      { hash: "j4k5l6m", message: "feat: connect websocket client", author: "contributor", files_changed: ["src/ws.ts"], action: "pick" },
+      { hash: "b8c9d0e", message: "add stuff for api", author: "contributor", files_changed: ["src/api.ts"], action: "reword", new_message: "feat(api): implement exponential retry backoff" },
+      { hash: "f1g2h3i", message: "TEMP: console.log response data", author: "contributor", files_changed: ["src/api.ts"], action: "drop" },
+      { hash: "j4k5l6m", message: "feat(ws): connect real-time WebSocket client", author: "contributor", files_changed: ["src/ws.ts"], action: "pick" },
+    ],
+  },
+  {
+    id: "rebase-conflict",
+    title: "3. Resolve Rebase Conflicts with Main Branch",
+    difficulty: "Advanced",
+    xp_reward: 300,
+    description: "Main branch moved forward while your PR was open. Rebase your feature onto main and resolve the conflict hunk in src/config.ts.",
+    base_branch: "main",
+    initial_commits: [
+      { hash: "c3d4e5f", message: "feat(config): update environment port defaults", author: "contributor", files_changed: ["src/config.ts"], action: "pick" },
+      { hash: "g7h8i9j", message: "docs: update deployment instructions", author: "contributor", files_changed: ["README.md"], action: "pick" },
+    ],
+    conflicts: [
+      {
+        commit_hash: "c3d4e5f",
+        file: "src/config.ts",
+        conflict_hunk: `<<<<<<< HEAD (main branch)
+export const PORT = process.env.PORT || 8080;
+=======
+export const PORT = process.env.PORT || 3000;
+>>>>>>> c3d4e5f (feat(config): update environment port defaults)`,
+      },
     ],
   },
 ];
 
 export const GitRebaseVisualizerPage: React.FC = () => {
-  const [scenarios, setScenarios] = useState<RebaseScenario[]>(DEFAULT_SCENARIOS);
-  const [activeScenario, setActiveScenario] = useState<RebaseScenario>(DEFAULT_SCENARIOS[0]);
-  const [commits, setCommits] = useState<RebaseCommit[]>(DEFAULT_SCENARIOS[0].initial_commits);
+  const [scenarios] = useState<RebaseScenario[]>(REAL_WORLD_SCENARIOS);
+  const [activeScenario, setActiveScenario] = useState<RebaseScenario>(REAL_WORLD_SCENARIOS[0]);
+  const [commits, setCommits] = useState<RebaseCommit[]>(REAL_WORLD_SCENARIOS[0].initial_commits);
   const [executionLogs, setExecutionLogs] = useState<string[]>([]);
-  const [conflicts, setConflicts] = useState<{ commit_hash: string; file: string; conflict_hunk: string }[]>([]);
   const [showConflictModal, setShowConflictModal] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [earnedXP, setEarnedXP] = useState<number>(0);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
 
-  useEffect(() => {
-    fetch("/api/sandbox/rebase-simulator/")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && data.scenarios) {
-          setScenarios(data.scenarios);
-          setActiveScenario(data.scenarios[0]);
-          setCommits(data.scenarios[0].initial_commits);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   const handleSelectScenario = (sc: RebaseScenario) => {
     setActiveScenario(sc);
     setCommits(sc.initial_commits);
     setExecutionLogs([]);
-    setConflicts([]);
     setIsCompleted(false);
   };
 
@@ -101,202 +116,218 @@ export const GitRebaseVisualizerPage: React.FC = () => {
     setCommits(updated);
   };
 
-  const handleExecuteRebase = async () => {
+  const handleExecuteRebase = () => {
     setIsExecuting(true);
-    try {
-      const res = await fetch("/api/sandbox/rebase-simulator/execute/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          base_commit: activeScenario.base_branch,
-          commit_actions: commits.map((c) => ({ action: c.action || "pick", commit: c, new_message: c.new_message })),
-          scenario_id: activeScenario.id,
-        }),
-      });
+    setExecutionLogs(["$ git rebase -i origin/main", "Parsing commit TODO list..."]);
 
-      if (res.ok) {
-        const data = await res.json();
-        setExecutionLogs(data.execution_logs || []);
+    setTimeout(() => {
+      if (activeScenario.conflicts && activeScenario.conflicts.length > 0) {
+        setExecutionLogs((prev) => [
+          ...prev,
+          "Applying: " + commits[0]?.message,
+          "CONFLICT (content): Merge conflict in " + activeScenario.conflicts![0].file,
+          "error: Failed to merge in the changes.",
+          "Patch failed at " + commits[0]?.hash.substring(0, 7),
+          "Fix conflicts and then run 'git rebase --continue'.",
+        ]);
+        setShowConflictModal(true);
+        setIsExecuting(false);
+      } else {
+        const logs = commits.map((c) => {
+          const act = (c.action || "pick").toUpperCase();
+          if (act === "DROP") return `[DROPPED] ${c.hash.substring(0, 7)} - ${c.message}`;
+          if (act === "SQUASH") return `[SQUASHED] into previous commit: ${c.message}`;
+          return `[APPLIED] ${c.hash.substring(0, 7)} - ${c.new_message || c.message}`;
+        });
 
-        if (data.conflicts && data.conflicts.length > 0) {
-          setConflicts(data.conflicts);
-          setShowConflictModal(true);
-        } else {
-          verifyCompletion(data.rebased_commits);
-        }
+        setExecutionLogs((prev) => [
+          ...prev,
+          ...logs,
+          "Successfully rebased and updated refs/heads/feature.",
+        ]);
+        setIsCompleted(true);
+        setEarnedXP(activeScenario.xp_reward);
+        setIsExecuting(false);
+        toast.success(`Scenario Mastered! +${activeScenario.xp_reward} XP`);
       }
-    } catch {
-      // Local demo execution fallback
-      const logs = commits.map(
-        (c) => `${(c.action || "pick").toUpperCase()} ${c.hash.substring(0, 7)} - ${c.message}`
-      );
-      setExecutionLogs(["git rebase -i main", ...logs, "Successfully rebased and updated refs/heads/feature."]);
-      setIsCompleted(true);
-      setEarnedXP(activeScenario.xp_reward);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  const verifyCompletion = async (rebasedCommits: RebaseCommit[]) => {
-    try {
-      const res = await fetch("/api/sandbox/rebase-simulator/verify/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenario_id: activeScenario.id,
-          rebased_commits: rebasedCommits,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.completed) {
-          setIsCompleted(true);
-          setEarnedXP(data.reward_xp || activeScenario.xp_reward);
-        }
-      }
-    } catch {
-      setIsCompleted(true);
-      setEarnedXP(activeScenario.xp_reward);
-    }
+    }, 600);
   };
 
   return (
-    <main id="main-content" className="min-h-screen bg-slate-900 text-slate-100 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header Banner */}
-        <div className="relative p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5">
-                  <GitBranch className="w-3.5 h-3.5 text-purple-400" /> Git Scenario Simulator
-                </span>
-                <span className="text-xs text-slate-400">Interactive Rebase & Commit Squashing</span>
-              </div>
-              <h1 className="text-3xl font-black text-white tracking-tight">
-                Git Interactive Rebase Visualizer
+    <main id="main-content" className="w-full max-w-7xl mx-auto space-y-6 text-text dark:text-[#f0ebe2]">
+      {/* Header Banner Deck */}
+      <div className="w-full bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-black/50 border-2 border-black/10 dark:border-[#2e2924] rounded-3xl p-6 shadow-card-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border-2 border-purple-500/40 flex items-center justify-center shrink-0 text-purple-400 shadow-card-sm">
+            <GitBranch className="w-7 h-7" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                Git Rebase Interactive Simulator
               </h1>
-              <p className="mt-2 text-sm text-slate-300 max-w-2xl">
-                Master <code className="text-amber-400 font-mono">git rebase -i</code> workflows visually. Reorder, reword, squash, and fixup commits before submitting pull requests.
+              <span className="text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                Interactive Lab
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1">
+              Master <code className="font-mono text-amber-400 font-bold">git rebase -i</code> in real-life open source scenarios. Squash WIP commits, reword titles, and resolve conflicts.
+            </p>
+          </div>
+        </div>
+
+        {/* Scenario Selection Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 shrink-0">
+          {scenarios.map((sc) => (
+            <button
+              key={sc.id}
+              onClick={() => handleSelectScenario(sc)}
+              className={`px-4 py-2 text-xs font-black rounded-xl whitespace-nowrap transition-all shadow-card-sm ${
+                activeScenario.id === sc.id
+                  ? "bg-purple-600 text-white border-2 border-purple-400"
+                  : "bg-white dark:bg-[#151411] text-slate-600 dark:text-slate-300 hover:text-text border-2 border-black/10 dark:border-[#2e2924]"
+              }`}
+            >
+              {sc.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Challenge Goal & Action Bar */}
+      <div className="bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-card-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+              Active Challenge Goal:
+            </span>
+            <span className="px-2.5 py-0.5 text-[10px] font-mono font-black text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-md">
+              +{activeScenario.xp_reward} Contributor XP
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm font-bold text-text dark:text-[#f0ebe2]">{activeScenario.description}</p>
+        </div>
+
+        <button
+          onClick={handleExecuteRebase}
+          disabled={isExecuting}
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-card-sm transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95"
+        >
+          <Play className="w-4 h-4 fill-white" />
+          {isExecuting ? "Executing Rebase..." : "Run Rebase (git rebase -i)"}
+        </button>
+      </div>
+
+      {/* Completion Celebration Alert */}
+      {isCompleted && (
+        <div className="p-5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl flex items-center justify-between shadow-card-sm animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                Rebase Scenario Mastered!
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                You successfully mastered this open-source Git workflow and earned <strong className="text-amber-500">+{earnedXP} Contributor XP</strong>.
               </p>
             </div>
-
-            {/* Scenario Selector Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-              {scenarios.map((sc) => (
-                <button
-                  key={sc.id}
-                  onClick={() => handleSelectScenario(sc)}
-                  className={`px-4 py-2.5 text-xs font-bold rounded-2xl whitespace-nowrap transition-all ${
-                    activeScenario.id === sc.id
-                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                      : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800"
-                  }`}
-                >
-                  {sc.title}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
+      )}
 
-        {/* Challenge Goal Description Card */}
-        <div className="p-6 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Current Challenge Goal:
-              </span>
-              <span className="px-2 py-0.5 text-[10px] font-bold text-amber-300 bg-amber-950 border border-amber-800 rounded">
-                +{activeScenario.xp_reward} XP
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-slate-200">{activeScenario.description}</p>
-          </div>
-
-          <button
-            onClick={handleExecuteRebase}
-            disabled={isExecuting}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            {isExecuting ? "Executing Rebase..." : "Run Rebase (git rebase -i)"}
-          </button>
-        </div>
-
-        {/* Completion Celebration Alert */}
-        {isCompleted && (
-          <div className="p-6 bg-emerald-950/40 border border-emerald-800/60 rounded-2xl flex items-center justify-between animate-fadeIn">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-emerald-200">Rebase Scenario Mastered!</h3>
-                <p className="text-xs text-emerald-300/80">
-                  Congratulations! You earned <strong className="text-amber-300">+{earnedXP} Contributor XP</strong>.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Workspace Canvas (Commit Graph & Terminal Logs) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Commit DAG Visualizer */}
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <GitCommit className="w-4 h-4 text-purple-400" /> Interactive Commit DAG Graph
+      {/* Interactive Rebase Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Interactive Commit DAG Graph & Action Selector */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-black text-text dark:text-[#f0ebe2] uppercase tracking-wider flex items-center gap-2">
+              <GitCommit className="w-4 h-4 text-purple-500" /> Interactive Commit TODO List
             </h2>
-
-            <RebaseCommitGraph
-              commits={commits}
-              onCommitActionChange={handleCommitActionChange}
-              onMoveCommit={handleMoveCommit}
-            />
+            <span className="text-xs font-mono text-slate-400">Drag or click actions to squash/reword</span>
           </div>
 
-          {/* Terminal Execution Logs */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-amber-400" /> Terminal Rebase Execution Log
-            </h2>
-
-            <div className="h-[450px] p-4 bg-slate-950 border border-slate-800 rounded-2xl font-mono text-xs text-slate-300 overflow-y-auto custom-scrollbar space-y-2">
-              <p className="text-slate-500"># Interactive Rebase instruction Todo list</p>
-              {commits.map((c, i) => (
-                <div key={i} className="text-slate-400">
-                  <span className="text-amber-400 font-bold">{(c.action || "pick").toLowerCase()}</span>{" "}
-                  <span className="text-slate-200">{c.hash.substring(0, 7)}</span> {c.new_message || c.message}
-                </div>
-              ))}
-
-              <div className="pt-4 border-t border-slate-800 space-y-1">
-                {executionLogs.map((log, idx) => (
-                  <p key={idx} className="text-emerald-400">
-                    $ {log}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Conflict Resolution Modal */}
-        {showConflictModal && (
-          <RebaseControlsModal
+          <RebaseCommitGraph
             commits={commits}
-            conflicts={conflicts}
-            onClose={() => setShowConflictModal(false)}
-            onResolveConflict={() => {
-              setShowConflictModal(false);
-              verifyCompletion(commits);
-            }}
+            onCommitActionChange={handleCommitActionChange}
+            onMoveCommit={handleMoveCommit}
           />
-        )}
+        </div>
+
+        {/* Terminal Execution Log & Educational Cheat Sheet */}
+        <div className="lg:col-span-5 space-y-4">
+          <h2 className="text-sm font-black text-text dark:text-[#f0ebe2] uppercase tracking-wider flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-amber-500" /> Terminal Execution Log
+          </h2>
+
+          <div className="h-[380px] p-4 bg-surface-low dark:bg-[#0a0a0f] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl font-mono text-xs space-y-2 overflow-y-auto">
+            <p className="text-slate-500"># Interactive Rebase Instruction Execution</p>
+            {commits.map((c, i) => (
+              <div key={i} className="text-slate-400 flex items-center gap-2">
+                <span className="text-amber-500 font-bold uppercase text-[10px] w-12">{c.action || "pick"}</span>
+                <span className="text-indigo-400">{c.hash.substring(0, 7)}</span>
+                <span className="truncate">{c.new_message || c.message}</span>
+              </div>
+            ))}
+
+            <div className="pt-4 border-t border-black/10 dark:border-[#2e2924] space-y-1">
+              {executionLogs.map((log, idx) => (
+                <p key={idx} className="text-emerald-500 dark:text-emerald-400 font-semibold">
+                  {log}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          {/* Educational IRL Rebase Guide Card */}
+          <div className="p-5 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-2xl space-y-3 shadow-card-sm">
+            <h3 className="font-black text-sm text-text dark:text-[#f0ebe2] flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" /> Real-World Git Rebase Commands
+            </h3>
+            <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+              <li className="flex items-start gap-2">
+                <span className="font-mono font-bold text-emerald-500 shrink-0">pick:</span>
+                <span>Keep the commit as-is in history.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-mono font-bold text-purple-500 shrink-0">squash:</span>
+                <span>Combine commit into previous commit and merge commit messages.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-mono font-bold text-cyan-500 shrink-0">reword:</span>
+                <span>Keep commit changes but rewrite title/message.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-mono font-bold text-rose-500 shrink-0">drop:</span>
+                <span>Completely delete commit from branch history.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
+
+      {/* Conflict Resolution Modal */}
+      {showConflictModal && (
+        <RebaseControlsModal
+          commits={commits}
+          conflicts={activeScenario.conflicts || []}
+          onClose={() => setShowConflictModal(false)}
+          onResolveConflict={() => {
+            setShowConflictModal(false);
+            setExecutionLogs((prev) => [
+              ...prev,
+              "$ git add src/config.ts",
+              "$ git rebase --continue",
+              "Applying: feat(config): update environment port defaults",
+              "Successfully rebased and updated refs/heads/feature.",
+            ]);
+            setIsCompleted(true);
+            setEarnedXP(activeScenario.xp_reward);
+            toast.success(`Conflict Resolved & Scenario Mastered! +${activeScenario.xp_reward} XP`);
+          }}
+        />
+      )}
     </main>
   );
 };
