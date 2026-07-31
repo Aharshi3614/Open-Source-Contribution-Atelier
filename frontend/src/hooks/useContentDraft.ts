@@ -54,14 +54,45 @@ export function useContentDraft(initialLessonId?: number) {
   const fetchModules = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await api.get<ModuleDraftData[]>("/content/modules/");
-      setModules(res.data || []);
-      if (initialLessonId) {
-        const found = (res.data || [])
-          .flatMap((m) => m.lessons)
-          .find((l) => l.id === initialLessonId);
-        if (found) {
-          setActiveLesson(found);
+      const res = await api.get<ModuleDraftData[]>("/content/modules/").catch(() => null);
+      if (res && res.data && res.data.length > 0) {
+        setModules(res.data);
+        if (initialLessonId) {
+          const found = res.data.flatMap((m) => m.lessons).find((l) => l.id === initialLessonId);
+          if (found) setActiveLesson(found);
+        } else if (res.data[0]?.lessons[0]) {
+          setActiveLesson(res.data[0].lessons[0]);
+        }
+      } else {
+        // Fallback to static curriculum.json or sample modules
+        const currRes = await fetch("/content/curriculum.json").catch(() => null);
+        if (currRes && currRes.ok) {
+          const currData = await currRes.json();
+          const mappedModules: ModuleDraftData[] = (currData.modules || []).map((m: any, idx: number) => ({
+            id: m.id ? idx + 1 : idx + 1,
+            title: m.title || `Module ${idx + 1}`,
+            slug: m.id || `module-${idx + 1}`,
+            description: m.description || "",
+            order: idx + 1,
+            lessons: (m.lessons || []).map((l: any, lIdx: number) => ({
+              id: (idx + 1) * 100 + lIdx + 1,
+              module: idx + 1,
+              title: l.title,
+              slug: l.slug,
+              description: l.description || "",
+              content: `# ${l.title}\n\n${l.description || "Welcome to this lesson."}\n\n\`\`\`typescript\nfunction startLesson() {\n  console.log("Interactive curriculum ready!");\n}\n\`\`\`\n`,
+              difficulty: l.difficulty || "beginner",
+              tags: ["git", "open-source"],
+              estimatedMinutes: l.estimatedMinutes || 10,
+              order: lIdx + 1,
+              isPublished: true,
+              quizzes: l.quizzes || [],
+            })),
+          }));
+          setModules(mappedModules);
+          if (mappedModules[0]?.lessons[0]) {
+            setActiveLesson(mappedModules[0].lessons[0]);
+          }
         }
       }
     } catch (err) {
