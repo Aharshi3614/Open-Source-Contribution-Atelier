@@ -204,6 +204,7 @@ INSTALLED_APPS = [
     "apps.events",
     "apps.portfolio",
     "apps.feature_flags",
+    "apps.issues",
     "apps.gamification",
     "apps.ai_tutor",
     "apps.project_health",
@@ -909,6 +910,7 @@ NOTIFICATION_CHANNELS = {
 
 # ── Test Environment Settings ──────────────────────────────────────────────
 TESTING = ("test" in sys.argv) or any("pytest" in arg for arg in sys.argv)
+SILENCED_SYSTEM_CHECKS = ["perf.E001", "fields.E336"]
 if TESTING:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True

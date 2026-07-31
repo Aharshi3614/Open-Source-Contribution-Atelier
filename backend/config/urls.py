@@ -12,6 +12,7 @@ from graphene_django.views import GraphQLView
 from apps.billing.views import CheckoutSessionView
 from apps.billing.webhooks import stripe_webhook
 from apps.dashboard.views import LeaderboardView
+from apps.content.views_notes import LessonNoteAPIView
 
 from .health_view import health_view
 from .version_view import api_versions_view, version_view
@@ -38,6 +39,8 @@ urlpatterns = [
     path("api/users/", include("apps.accounts.user_urls")),
     # ── Core Apps ──────────────────────────────────────────────────────────────
     path("api/content/", include("apps.content.urls")),
+    path("api/lessons/<str:lesson_id>/notes", LessonNoteAPIView.as_view(), name="api-lesson-notes"),
+    path("api/lessons/<str:lesson_id>/notes/", LessonNoteAPIView.as_view(), name="api-lesson-notes-slash"),
     path("api/billing/", include("apps.billing.urls")),
     path("api/progress/", include("apps.progress.urls")),
     path("api/localization/", include("apps.localization.urls")),

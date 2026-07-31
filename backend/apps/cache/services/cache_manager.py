@@ -93,6 +93,7 @@ class CacheManager:
         if result:
             logger.debug(f"Cache set: {key} (TTL: {ttl}s)")
             return True
+
         logger.warning(f"Cache set failed: {key}")
         return False
 
@@ -124,6 +125,7 @@ class CacheManager:
         """
         # Note: This is a simplified implementation using standard django cache backend features
         # In production, use Redis SCAN for better performance if using a Redis backend
+        count = 0
         if hasattr(cache, "keys"):
             keys = cache.keys(f"*{pattern}*")  # type: ignore
             for key in keys:
@@ -133,6 +135,7 @@ class CacheManager:
             logger.warning(
                 "Cache backend does not support keys() pattern extraction natively."
             )
+
         logger.info(f"Cleared {count} keys matching pattern: {pattern}")
         return count
 
@@ -393,6 +396,7 @@ def invalidate_cache_on_save(sender, instance, created, **kwargs):
     if not _cache_signals_enabled:
         return
 
+    # Skip during migrations or when system apps are involved
     if _is_migration_in_progress() or sender._meta.app_label in [
         "migrations",
         "contenttypes",
