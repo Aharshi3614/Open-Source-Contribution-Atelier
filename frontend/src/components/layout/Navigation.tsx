@@ -299,27 +299,37 @@ export function Navigation() {
       </aside>
 
       <header className="fixed inset-x-0 top-0 z-30 h-[72px] border-b-4 border-black bg-white lg:left-[240px] dark:border-[#2e2924] dark:bg-[#0f0e0c]">
-        <div className="flex h-full items-center justify-between space-x-4 px-4 sm:px-6 lg:px-8">
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden rounded-lg border-2 border-black p-2 menu-btn"
-            aria-expanded={mobileOpen}
-            aria-label={mobileOpen ? "Close mobile menu" : "Open mobile menu"}
-            aria-controls="mobile-menu"
-          >
-            <Menu size={22} />
-          </button>
-          <div className="flex min-w-0 items-center space-x-3 relative grow max-w-md">
-            <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-3 py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-slate-200 dark:focus-within:bg-[#0f0e0c]">
+        <div className="flex h-full items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8 max-w-full overflow-hidden">
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="lg:hidden rounded-lg border-2 border-black p-2 menu-btn bg-white dark:bg-[#151411] dark:border-[#2e2924]"
+              aria-expanded={mobileOpen}
+              aria-label={mobileOpen ? "Close mobile menu" : "Open mobile menu"}
+              aria-controls="mobile-menu"
+            >
+              <Menu size={20} />
+            </button>
+            <Link
+              to="/"
+              className="lg:hidden font-display text-lg font-black tracking-tight text-black dark:text-white uppercase"
+            >
+              Atelier
+            </Link>
+          </div>
+
+          {/* Search bar input container - responsive width */}
+          <div className="flex min-w-0 items-center space-x-2 relative grow max-w-[150px] xs:max-w-[220px] sm:max-w-md">
+            <div className="flex items-center space-x-2 rounded-lg bg-surface-low px-2.5 py-1.5 sm:px-3 sm:py-2 text-muted w-full border-2 border-black dark:border-[#2e2924] shadow-card-sm focus-within:bg-white transition-all dark:bg-[#151411] dark:text-slate-200 dark:focus-within:bg-[#0f0e0c]">
               <label htmlFor="nav-search-input" className="sr-only">
-                Search lessons and issues
+                Search features, tools, lessons, pages
               </label>
-              <Search size={15} className="shrink-0" />
+              <Search size={14} className="shrink-0 text-slate-400" />
               <input
                 id="nav-search-input"
                 type="text"
-                placeholder="Search features, tools, lessons, pages..."
-                className="bg-transparent border-none outline-none text-sm w-full text-text placeholder:text-muted/75 dark:text-[#f0ebe2] dark:placeholder:text-slate-300/75"
+                placeholder="Search..."
+                className="bg-transparent border-none outline-none text-xs sm:text-sm w-full text-text placeholder:text-muted/75 dark:text-[#f0ebe2] dark:placeholder:text-slate-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -339,14 +349,14 @@ export function Navigation() {
               <div className="absolute top-full left-0 right-0 mt-2 bg-white border-4 border-black rounded-2xl shadow-card p-4 z-50 max-h-[70vh] overflow-y-auto dark:bg-[#151411] dark:border-[#2e2924]">
                 {isSearching ? (
                   <p className="text-sm text-muted animate-pulse dark:text-[#c4bbae]">
-                    Searching features & lessons...
+                    Searching features &amp; lessons...
                   </p>
                 ) : (
                   <div className="space-y-6">
                     {searchResults.features && searchResults.features.length > 0 && (
                       <div>
                         <h4 className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-2 font-bold flex items-center justify-between">
-                          <span>🛠️ Features & Tools</span>
+                          <span>🛠️ Features &amp; Tools</span>
                           <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded">
                             {searchResults.features.length} found
                           </span>
@@ -379,7 +389,7 @@ export function Navigation() {
                     {searchResults.lessons.length > 0 && (
                       <div>
                         <h4 className="font-mono text-[10px] uppercase tracking-widest text-primary mb-2 font-bold">
-                          📚 Lessons & Content
+                          📚 Lessons &amp; Content
                         </h4>
                         <div className="space-y-1.5">
                           {searchResults.lessons.map((lesson) => (
@@ -403,7 +413,7 @@ export function Navigation() {
                     {searchResults.challenges.length > 0 && (
                       <div>
                         <h4 className="font-mono text-[10px] uppercase tracking-widest text-accent mb-2 font-bold">
-                          🎯 Issues & Challenges
+                          🎯 Issues &amp; Challenges
                         </h4>
                         <div className="space-y-1.5">
                           {searchResults.challenges.map((challenge) => (
@@ -436,31 +446,26 @@ export function Navigation() {
               </div>
             )}
           </div>
-          <div className="flex items-center space-x-3">
+
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
             <Link
               to="/docs/fullstack"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
             >
               <BookOpen size={14} /> Full-Stack Docs
-            </Link>
-            <Link
-              to="/dashboard"
-              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-primary md:inline-flex"
-            >
-              Dashboard
             </Link>
             <SyncStatusIndicator />
             <ThemeToggle />
             {user && !user.is_staff && <NotificationMenu />}
             {user ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <Link
                   to="/profile"
-                  className="font-bold text-sm text-text bg-white px-3 py-2 rounded-lg border-2 border-black dark:bg-[#151411] dark:text-[#f0ebe2] dark:border-[#2e2924] flex items-center gap-1.5 shadow-card-sm hover:bg-surface-low transition-colors dark:hover:bg-[#1f1c18]"
+                  className="font-bold text-xs sm:text-sm text-text bg-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border-2 border-black dark:bg-[#151411] dark:text-[#f0ebe2] dark:border-[#2e2924] flex items-center gap-1.5 shadow-card-sm hover:bg-surface-low transition-colors dark:hover:bg-[#1f1c18]"
                   title="Profile Settings"
                 >
                   👤{" "}
-                  <span className="max-w-[80px] truncate">{user.username}</span>
+                  <span className="hidden sm:inline-block max-w-[80px] truncate">{user.username}</span>
                   {user.is_staff && (
                     <span className="font-black text-[9px] bg-[#ff665c] text-white px-1.5 py-0.5 rounded border border-black dark:border-none">
                       ADMIN
@@ -470,16 +475,16 @@ export function Navigation() {
                 <LogoutButtonWithConfirm />
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <Link
                   to="/login"
-                  className="rounded-xl bg-white border-2 border-black px-4 py-2 text-sm font-bold text-text shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 transition-all dark:bg-[#151411] dark:text-[#f0ebe2] dark:border-[#2e2924]"
+                  className="rounded-xl bg-white border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold text-text shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 transition-all dark:bg-[#151411] dark:text-[#f0ebe2] dark:border-[#2e2924]"
                 >
                   {t('nav.login', {defaultValue: 'Log In'})}
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-xl bg-[#C3C0FF] border-2 border-black px-4 py-2 text-sm font-black text-black shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 transition-all dark:bg-[#C3C0FF] dark:border-white"
+                  className="rounded-xl bg-[#C3C0FF] border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-black text-black shadow-card-sm hover:-translate-y-0.5 active:translate-y-0 transition-all dark:bg-[#C3C0FF] dark:border-white"
                 >
                   Sign Up
                 </Link>
@@ -488,28 +493,50 @@ export function Navigation() {
           </div>
         </div>
       </header>
+
+      {/* Mobile Navigation Drawer */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden animate-fade-in"
           onClick={() => setMobileOpen(false)}
           onKeyDown={(e) => e.key === "Escape" && setMobileOpen(false)}
           aria-hidden="true"
         >
           <div
             id="mobile-menu"
-            className="absolute left-0 top-0 h-full w-72 bg-white dark:bg-[#151411] p-6"
+            className="absolute left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-[#151411] flex flex-col shadow-2xl border-r-4 border-black dark:border-[#2e2924]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-label="Mobile Navigation"
           >
-            <div className="space-y-2">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b-4 border-black dark:border-[#2e2924]">
+              <div className="flex flex-col">
+                <span className="font-black text-lg uppercase tracking-tight text-black dark:text-white">
+                  Atelier
+                </span>
+                <span className="text-[10px] font-mono text-muted dark:text-[#9b8f80]">
+                  Contribution Console
+                </span>
+              </div>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-2 rounded-lg border-2 border-black dark:border-[#2e2924] hover:bg-gray-100 dark:hover:bg-[#1f1c18]"
+                aria-label="Close menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable Nav Items */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar pb-24">
               {navGroups.map((group) => (
                 <div key={group.title} className="space-y-1">
-                  <h3 className="px-3 text-[10px] font-mono uppercase tracking-[0.2em] text-muted/65 dark:text-[#9b8f80]/65">
+                  <h3 className="px-3 text-[10px] font-mono uppercase tracking-[0.2em] text-muted/65 dark:text-[#9b8f80]/65 font-bold">
                     {group.title}
                   </h3>
-                  <div className="space-y-0.5">
+                  <div className="space-y-1">
                     {group.items.map((item) => {
                       const Icon = item.icon;
                       return (
@@ -517,10 +544,17 @@ export function Navigation() {
                           key={item.to}
                           to={item.to}
                           onClick={() => setMobileOpen(false)}
-                          className="flex items-center gap-3 rounded-lg px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#1f1c18]"
+                          className={({ isActive }) =>
+                            [
+                              "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all border-2",
+                              isActive
+                                ? "bg-[#C3C0FF]/25 border-black dark:border-[#2e2924] text-text dark:text-[#f0ebe2] shadow-card-sm"
+                                : "border-transparent text-muted hover:bg-gray-100 dark:hover:bg-[#1f1c18] dark:text-[#c4bbae]",
+                            ].join(" ")
+                          }
                         >
-                          <Icon size={18} />
-                          {item.label}
+                          <Icon size={16} />
+                          <span>{item.label}</span>
                         </NavLink>
                       );
                     })}

@@ -132,7 +132,7 @@ export function ContentStudioPage() {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col gap-6 p-4 md:p-8 pt-28 bg-surface dark:bg-[#0a0a0f] text-text dark:text-[#f0ebe2]">
+    <div className="w-full min-h-screen flex flex-col gap-6 bg-surface dark:bg-[#0a0a0f] text-text dark:text-[#f0ebe2]">
       {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b-2 border-black/10 dark:border-[#2e2924]">
         <div>
