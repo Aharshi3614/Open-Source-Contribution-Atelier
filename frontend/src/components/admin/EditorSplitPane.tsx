@@ -52,17 +52,17 @@ export function EditorSplitPane({
   );
 
   return (
-    <div className="w-full h-[calc(100vh-220px)] min-h-[500px]">
-      <Group direction="horizontal">
-        <Panel defaultSize={50} minSize={30}>
-          <div className="w-full h-full p-2 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-xl flex flex-col overflow-hidden shadow-sm">
-            <div className="text-xs font-bold text-muted dark:text-[#a0988c] px-3 py-1.5 border-b border-black/10 dark:border-[#2e2924] flex items-center justify-between">
+    <div className="w-full min-w-0 h-[680px] overflow-hidden">
+      <Group direction="horizontal" className="w-full h-full min-w-0">
+        <Panel defaultSize={50} minSize={30} className="min-w-0">
+          <div className="w-full h-full p-2 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-xl flex flex-col overflow-hidden shadow-sm min-w-0">
+            <div className="text-xs font-bold text-muted dark:text-[#a0988c] px-3 py-1.5 border-b border-black/10 dark:border-[#2e2924] flex items-center justify-between shrink-0">
               <span>Markdown Editor (EasyMDE)</span>
               <span className="text-[10px] text-accent">
                 Drag & drop images supported
               </span>
             </div>
-            <div className="flex-1 overflow-y-auto p-1 text-text dark:text-[#f0ebe2]">
+            <div className="flex-1 overflow-y-auto p-1 text-text dark:text-[#f0ebe2] min-w-0">
               <SimpleMDE
                 value={lesson.content || ""}
                 onChange={onChangeContent}
@@ -72,11 +72,11 @@ export function EditorSplitPane({
           </div>
         </Panel>
 
-        <Separator className="w-2 mx-1 rounded bg-black/10 dark:bg-[#2e2924] hover:bg-accent transition-colors cursor-col-resize flex items-center justify-center">
+        <Separator className="w-2 mx-1 rounded bg-black/10 dark:bg-[#2e2924] hover:bg-accent transition-colors cursor-col-resize flex items-center justify-center shrink-0">
           <div className="w-1 h-8 bg-black/30 dark:bg-white/30 rounded-full" />
         </Separator>
 
-        <Panel defaultSize={50} minSize={30}>
+        <Panel defaultSize={50} minSize={30} className="min-w-0">
           <LessonPreview lesson={lesson} />
         </Panel>
       </Group>

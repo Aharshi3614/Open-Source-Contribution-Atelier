@@ -132,21 +132,18 @@ export function ContentStudioPage() {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col gap-6 p-4 md:p-8 bg-surface dark:bg-[#0a0a0f] text-text dark:text-[#f0ebe2]">
+    <div className="w-full min-h-screen flex flex-col gap-6 p-4 md:p-8 pt-28 bg-surface dark:bg-[#0a0a0f] text-text dark:text-[#f0ebe2]">
       {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b-2 border-black/10 dark:border-[#2e2924]">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text dark:text-[#f0ebe2] flex items-center gap-2">
-            <FileEdit className="w-8 h-8 text-accent" /> Content Authoring
-            Studio
+            <FileEdit className="w-8 h-8 text-accent" /> Content Authoring Studio
           </h1>
           <p className="text-sm font-medium text-muted dark:text-[#c4bbae]">
-            WYSIWYG Admin Editor for Lessons & Quizzes with Live Preview &
-            Autosave.
+            WYSIWYG Admin Editor for Lessons &amp; Quizzes with Live Preview &amp; Autosave.
           </p>
         </div>
 
-        {activeLesson && (
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleExportCurriculumJSON}
@@ -213,13 +210,12 @@ export function ContentStudioPage() {
             </>
           )}
         </div>
-        )}
       </div>
 
       {/* Main Studio Body: Sidebar + Editor Pane */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full min-w-0">
         {/* Sidebar: Module Tree */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 min-w-0 w-full">
           <ModuleTree
             modules={modules}
             activeLessonId={activeLesson?.id}
@@ -232,7 +228,7 @@ export function ContentStudioPage() {
         </div>
 
         {/* Editor Main Content Area */}
-        <div className="lg:col-span-9 flex flex-col gap-4">
+        <div className="lg:col-span-9 min-w-0 w-full flex flex-col gap-4">
           {!activeLesson ? (
             <div className="w-full py-20 px-6 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-xl text-center flex flex-col items-center justify-center gap-3">
               <GitFork className="w-12 h-12 text-muted/40" />
