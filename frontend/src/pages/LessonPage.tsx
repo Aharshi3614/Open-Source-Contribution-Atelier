@@ -311,6 +311,9 @@ useEffect(() => {
       }
       console.error("Failed to submit quiz attempt:", err);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProgress"] });
+    },
   });
 
   // 1. Fetch modules catalog & lessons
