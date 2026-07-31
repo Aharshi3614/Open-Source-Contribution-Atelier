@@ -109,11 +109,11 @@ export function EditorSplitPane({
       </div>
 
       {/* Editor & Preview Workspace */}
-      <div className="w-full min-w-0 grid grid-cols-1 xl:grid-cols-12 gap-4 h-[650px] items-stretch">
+      <div className="w-full min-w-0 flex flex-col 2xl:flex-row gap-4 h-[650px] items-stretch">
         {(viewMode === "editor" || viewMode === "split") && (
           <div
             className={`min-w-0 h-full p-3 bg-white dark:bg-[#151411] border-2 border-slate-200 dark:border-[#2e2924] rounded-xl flex flex-col overflow-hidden shadow-sm ${
-              viewMode === "split" ? "xl:col-span-6" : "xl:col-span-12"
+              viewMode === "split" ? "w-full 2xl:w-1/2" : "w-full"
             }`}
           >
             <div className="text-xs font-bold text-slate-500 dark:text-[#a0988c] pb-2 border-b border-slate-200 dark:border-[#2e2924] flex items-center justify-between shrink-0">
@@ -135,7 +135,7 @@ export function EditorSplitPane({
         {(viewMode === "preview" || viewMode === "split") && (
           <div
             className={`min-w-0 h-full overflow-hidden ${
-              viewMode === "split" ? "xl:col-span-6" : "xl:col-span-12"
+              viewMode === "split" ? "w-full 2xl:w-1/2" : "w-full"
             }`}
           >
             <LessonPreview lesson={lesson} />

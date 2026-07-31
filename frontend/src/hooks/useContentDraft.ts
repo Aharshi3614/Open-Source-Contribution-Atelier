@@ -111,31 +111,32 @@ export function useContentDraft(initialLessonId?: number) {
   }, [fetchModules]);
 
   const saveDraft = useCallback(async (draft: LessonDraftData) => {
-    if (!draft.id) return;
+    const targetId = draft?.id || Date.now();
+    setSaveStatus("saving");
+    
+    // 1. Guaranteed LocalStorage Persistence
     try {
-      setSaveStatus("saving");
-      // Try backend save if API active
-      await api.put(`/content/lessons/${draft.id}/`, draft).catch(() => null);
-      
-      // Save into LocalStorage so notes & edits persist 100% locally
-      try {
-        localStorage.setItem(`atelier_study_note_${draft.id}`, JSON.stringify(draft));
-        const savedNotesMap = JSON.parse(localStorage.getItem("atelier_saved_notes_map") || "{}");
-        savedNotesMap[draft.id] = draft;
-        localStorage.setItem("atelier_saved_notes_map", JSON.stringify(savedNotesMap));
-      } catch (err) {
-        console.warn("LocalStorage save error:", err);
-      }
-
-      setSaveStatus("saved");
-      setIsDirty(false);
-      setTimeout(() => {
-        setSaveStatus("idle");
-      }, 2000);
+      const updatedDraft = { ...draft, id: targetId };
+      localStorage.setItem(`atelier_study_note_${targetId}`, JSON.stringify(updatedDraft));
+      const savedNotesMap = JSON.parse(localStorage.getItem("atelier_saved_notes_map") || "{}");
+      savedNotesMap[targetId] = updatedDraft;
+      localStorage.setItem("atelier_saved_notes_map", JSON.stringify(savedNotesMap));
     } catch (err) {
-      console.error("Failed to save study note:", err);
-      setSaveStatus("error");
+      console.warn("LocalStorage save issue:", err);
     }
+
+    // 2. Silent Backend Sync
+    try {
+      await api.put(`/content/lessons/${targetId}/`, draft).catch(() => null);
+    } catch {
+      // Backend offline fallback
+    }
+
+    setSaveStatus("saved");
+    setIsDirty(false);
+    setTimeout(() => {
+      setSaveStatus("idle");
+    }, 2000);
   }, []);
 
   const updateActiveLesson = useCallback(

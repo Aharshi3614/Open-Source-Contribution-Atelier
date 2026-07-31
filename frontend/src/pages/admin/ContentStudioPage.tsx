@@ -232,9 +232,9 @@ export function ContentStudioPage() {
       </div>
 
       {/* Main Studio Body: Sidebar + Editor Pane */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full min-w-0">
+      <div className="flex flex-col 2xl:flex-row gap-6 w-full items-start">
         {/* Sidebar: Module Tree */}
-        <div className="lg:col-span-3 min-w-0 w-full">
+        <div className="w-full 2xl:w-80 shrink-0">
           <ModuleTree
             modules={modules}
             activeLessonId={activeLesson?.id}
@@ -247,7 +247,7 @@ export function ContentStudioPage() {
         </div>
 
         {/* Editor Main Content Area */}
-        <div className="lg:col-span-9 min-w-0 w-full flex flex-col gap-4">
+        <div className="flex-1 min-w-0 w-full flex flex-col gap-4">
           {!activeLesson ? (
             <div className="w-full py-20 px-6 bg-white dark:bg-[#151411] border-2 border-black/10 dark:border-[#2e2924] rounded-xl text-center flex flex-col items-center justify-center gap-3">
               <GitFork className="w-12 h-12 text-muted/40" />
