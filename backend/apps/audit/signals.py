@@ -34,7 +34,10 @@ def _is_auditable(sender) -> bool:
 def _model_snapshot(instance) -> dict:
     """Serialise instance fields to a plain dict (JSON-safe)."""
     try:
-        return model_to_dict(instance)
+        fields = None
+        if hasattr(instance, "audit_snapshot_fields"):
+            fields = instance.audit_snapshot_fields()
+        return model_to_dict(instance, fields=fields)
     except Exception as e:
         logger.warning("Caught exception: %s", e)
         return {"pk": instance.pk}
